@@ -59,27 +59,27 @@ The recent years has shown a significant growth in funds raised by ICO (Initial 
 
 
 ## Functions
-*** `constructor` *** - takes args and deploys contract
+ `constructor`  - takes args and deploys contract
 
-*** `initSale` *** - take args - _saleRate, _listingRate, _hardCap, _softCap, _minBuy, _maxBuy amount must be in wei
+ `initSale`  - take args - _saleRate, _listingRate, _hardCap, _softCap, _minBuy, _maxBuy amount must be in wei
 
-*** `fallback function` *** - allows users to contribute only when the sale is active and requirements are passed
+ `fallback function`  - allows users to contribute only when the sale is active and requirements are passed
 
-*** `deposit` *** - calculates the amount and deposits them into contract
+ `deposit`  - calculates the amount and deposits them into contract
 
-*** `cancelSale` *** - allows the creator to cancel the sale and start refund if the sale is still active
+ `cancelSale`  - allows the creator to cancel the sale and start refund if the sale is still active
 
-*** `buyTokens` *** - used to buy tokens based on the msg value if requirements are passed
+ `buyTokens`  - used to buy tokens based on the msg value if requirements are passed
 
-*** `claimTokens` *** - used to claim the purchased tokens after the sale is completed
+ `claimTokens`  - used to claim the purchased tokens after the sale is completed
 
-*** `refund` *** - used to refund the contributed ETH after the sale fails
+ `refund`  - used to refund the contributed ETH after the sale fails
 
-*** `withrawTokens` *** - allows creator to withraw the deposited tokens to the contract once the sale fails
+ `withrawTokens`  - allows creator to withraw the deposited tokens to the contract once the sale fails
 
-*** `finishSale` *** - allows the creator to finish the sale, provide liquidity, pay fees, withraw raised funds and burn/refund the remaining tokens if the hc is not reached
+ `finishSale`  - allows the creator to finish the sale, provide liquidity, pay fees, withraw raised funds and burn/refund the remaining tokens if the hc is not reached
 
-*** `_checkSaleRequirements` *** - checks if the requirements are met
+ `_checkSaleRequirements`  - checks if the requirements are met
 
 ## Tests
 #### Included just few test in this repository that cover all ICO scenarios
