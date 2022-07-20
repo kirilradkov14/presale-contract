@@ -6,11 +6,12 @@ pragma solidity ^0.8.4;
 
 import './SafeMath.sol';
 import './Ownable.sol';
+import './Whitelist.sol';
 
 /*
 * !=======================================! Presale contract !=======================================!
 */
-contract Presale is Ownable {
+contract Presale is Ownable, Whitelist {
     using SafeMath for uint256;
     using SafeMath for uint8;
 
@@ -28,6 +29,7 @@ contract Presale is Ownable {
     bool isRefund;
     bool isFinish;
     bool burnTokens;
+    bool isWhitelist;
 
     struct Pool {
         uint256 softCap;
@@ -48,6 +50,7 @@ contract Presale is Ownable {
 
     struct User {
         uint256 ethContribution;
+        uint256 unlockedTokens;
     }
     
     Balances public bal;
@@ -102,7 +105,8 @@ contract Presale is Ownable {
         uint8 _fee, 
         address _teamWallet, 
         address _weth, 
-        bool _burnTokens
+        bool _burnTokens,
+        bool _isWhitelist
         ) {
 
         require(_creatorWallet != address(0), 'creatorWallet must be 0 address.');
@@ -122,6 +126,7 @@ contract Presale is Ownable {
         creatorWallet = _creatorWallet;
         tokenDecimals =  _tokenDecimals;
         teamWallet = _teamWallet;
+        isWhitelist = _isWhitelist;
         fee = _fee;
         weth = _weth;
         UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
@@ -314,14 +319,27 @@ contract Presale is Ownable {
             }
         }
 
-        //updating the boolean prevents from using the function again ever
+        //updating the boolean prevents from using the function again
         isFinish = true;
+    }
+
+    /*
+    * Owner disables whitelist
+    */
+    function disableWhitelist() external onlyOwner onlyActive{
+        require(isWhitelist, 'Whitelist is disabled.');
+
+        isWhitelist = false;
     }
 
     /*
     * Checks whether a user passes token purchase requirements, called internally on buyTokens function
     */
     function _checkSaleRequirements (address _beneficiary, uint256 _amount) internal view { 
+        if (isWhitelist) {
+            require(whitelists[_msgSender()] == true, "Presale. User not whitelisted");
+        }
+
         require(_beneficiary != address(0), 'transfer to 0 address.');
         require(_amount != 0, "weiAmount is 0");
         require(_amount >= pool.minBuy, 'minBuy is not met.');
@@ -342,6 +360,7 @@ contract Presale is Ownable {
         value = value.sub(value.mul(fee).div(100));
         return value.div(10**18).div(10**(18-tokenDecimals));
     }
+
     function _getFeeEth() internal view returns (uint256) {
         return ((bal.ethRaised.mul(fee)).div(100));
     }
@@ -356,6 +375,7 @@ contract Presale is Ownable {
         uint256 liquidityEthFee = _getLiquidityEth();
         return(bal.ethRaised.sub(etherFee.add(liquidityEthFee)));
     }
+
     function _getTokenDeposit() internal view returns (uint256){
         uint256 tokensForSale = pool.hardCap.mul(pool.saleRate).div(10**18).div(10**(18-tokenDecimals));
         uint256 tokensForLiquidity = _getLiquidityTokensDeposit();

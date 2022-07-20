@@ -1,7 +1,281 @@
 const { expect } = require("chai");
+const { assert } = require("console");
 const { ethers } = require("hardhat");
 
-describe('Sample Test', () => { 
+describe.skip('Test WL', () => {
+    function sleep(ms) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    it.skip('Check if a non-WL user can contribute', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+    })
+
+    it.skip('Check if user can contribute after he is WL', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const whitelist = await presale.connect(creator).addAddress(user1.address);
+        await whitelist.wait();
+        console.log("User 1 Whitelisted");
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+    })
+
+    it.skip('Check if a non-WL user can contribute after WL is disabled', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const disableWL = await presale.connect(creator).disableWhitelist();
+        await disableWL.wait();
+        console.log('WL disabled');
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+    })
+
+    it.skip('Check if address thats removed from WL can still contribuite', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        
+        const whitelist = await presale.connect(creator).addAddress(user1.address);
+        await whitelist.wait();
+        console.log("User 1 Whitelisted");
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const delist = await presale.connect(creator).removeAddress(user1.address);
+        await delist.wait();
+        console.log("User 1 Delisted");
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+    })
+
+    it.skip('WL several adresses', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const whitelist = await presale.connect(creator).addMultipleAddresses([user1.address, user2.address]);
+        await whitelist.wait();
+        console.log("User 1 Whitelisted");
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+
+        const secondContribution = await user2.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await secondContribution.wait();
+        console.log('User 2 makes deposit');
+    })
+
+    it.skip('Delist several addresses', async () => {
+        const [creator, user1, user2, user3] = await ethers.getSigners();
+        expect([creator, user1, user2, user3]).to.not.be.undefined;
+
+        const tokenFactory = await ethers.getContractFactory("Token");
+        const token = await tokenFactory.deploy();
+        await token.deployed();
+        console.log("Token at: " + token.address);
+    
+        const presaleFactory = await ethers.getContractFactory("Presale");
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, true);
+        await presale.deployed();
+        console.log('Presale at: '  + presale.address);
+
+        const timestampNow = Math.floor(new Date().getTime()/1000);
+        const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
+        await initSale.wait();
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
+        console.log('Sale initialized');
+
+        const whitelist = await presale.connect(creator).addMultipleAddresses([user1.address, user2.address]);
+        await whitelist.wait();
+        console.log("User 1 Whitelisted");
+
+        await sleep(50*1000);
+
+        const makeDeposit = await presale.connect(creator).deposit();
+        await makeDeposit.wait();
+        await sleep(10*1000);
+        expect(await token.balanceOf(presale.address)).to.equal(await presale.getTokenDeposit(), "Failed to deposit");
+        console.log('Tokens deposited');
+
+        const delistSeveral = await presale.connect(creator).removeMultipleAddresses([user1.address, user2.address]);
+        await delistSeveral.wait();
+        console.log('User1, User2 delisted');
+
+        const firstContribution = await user1.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await firstContribution.wait();
+        console.log('User 1 makes deposit');
+
+        const secondContribution = await user2.sendTransaction({
+            to: presale.address,
+            value: ethers.utils.parseEther('0.001')
+        })
+        await secondContribution.wait();
+        console.log('User 2 makes deposit');
+    })
+})
+
+describe.skip('Sample Test', () => { 
     function sleep(ms) {
         return new Promise((resolve) => {
             setTimeout(resolve, ms);
@@ -17,7 +291,7 @@ describe('Sample Test', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false);
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, false);
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
@@ -85,7 +359,7 @@ describe('Sample Test', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 4, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true);
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 4, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
@@ -156,7 +430,7 @@ describe('Sample Test', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false);
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, false);
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
@@ -224,7 +498,7 @@ describe('Sample Test', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false);
+        const presale = await presaleFactory.deploy(creator.address, token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false, false);
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
