@@ -1,4 +1,3 @@
-
 pragma solidity ^0.8.4;
 // SPDX-License-Identifier: Unlicensed
 // A+G = VNL

@@ -7,7 +7,7 @@ import './Ownable.sol';
 
 abstract contract Whitelist is Ownable{
 
-    mapping (address => bool) whitelists;
+    mapping(address => bool) whitelists;
 
     function addAddress(address _user) external onlyOwner{
         require(whitelists[_user] == false, "Whitelist. Address is already whitelisted");
@@ -16,7 +16,7 @@ abstract contract Whitelist is Ownable{
         whitelists[_user] = true;
     }
 
-    function addMultipleAddresses(address[] memory  _users) external onlyOwner {
+    function addMultipleAddresses(address[] calldata  _users) external onlyOwner {
         for (uint i = 0; i < _users.length; i++){
             whitelists[_users[i]] = true;
         }
@@ -29,7 +29,7 @@ abstract contract Whitelist is Ownable{
          whitelists[_user] = false;
     }
 
-    function removeMultipleAddresses(address[] memory  _users) external onlyOwner {
+    function removeMultipleAddresses(address[] calldata  _users) external onlyOwner {
         for (uint i = 0; i < _users.length; i++){
             whitelists[_users[i]] = false;
         }

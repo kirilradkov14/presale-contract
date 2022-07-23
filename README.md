@@ -7,14 +7,10 @@ The recent years has shown a significant growth in funds raised by ICO (Initial 
 
 ## How it works ?
 #### The creator deploys the contract with the following args:
-- _creatorWallet - ICO creator wallet
 - _tokenInstance - Token address
 - _tokenDecimals - Token decimals
 - _uniswapv2Router - UniswapV2 Router
 - _uniswapv2Factory - UniswapV2 Factory
-- _fee - The fee that the ICO creator pays to the team in both tokens and ether
-- _teamWallet - the team wallet
-- _weth - Wrapped ethereum address
 - _burnToken - when true burns the remaining tokens if the HardCap is not reached, when false refunds to the presale creator
 #### The creator then initiates the sale, passing the following args:
 - _saleRate - Tokens for 1 ETH on presale
@@ -51,6 +47,7 @@ The recent years has shown a significant growth in funds raised by ICO (Initial 
 - call the finishSale function if either the HC is reached or SC is reached and sale time expired
 - cancel the sale 
 - withrawal back his tokens if the sale is unsuccessful
+- disable WL
 
 ### User can:
 - Contribute to the ICO and receive proportional amount of tokens
@@ -82,7 +79,6 @@ The recent years has shown a significant growth in funds raised by ICO (Initial 
  `_checkSaleRequirements`  - checks if the requirements are met
 
 ## Tests
-#### Included just few test in this repository that cover all ICO scenarios
 1. Pass args, deposit tokens, reach HC, finish sale, claim
 2. Pass args, deposit tokens, reach sc, wait sale to finish, finish sale, claim
 3. Pass args, deposit tokens, cancel sale, start refund
