@@ -100,7 +100,7 @@ contract Presale is Ownable, Whitelist {
         tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
         require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "Error: Uniswap pool already existing.");
     }
-    
+
     event Liquified(
         address indexed _token, 
         address indexed _router, 
@@ -126,8 +126,9 @@ contract Presale is Ownable, Whitelist {
     event BurntRemainder(address indexed _initiator, uint256 _amount);
 
     event Withdraw(address indexed _creator, uint256 _amount);
+
     /*
-    * Fallback function reverts ethers sent to this address whenever requirements are not met
+    * Reverts ethers sent to this address whenever requirements are not met
     */
     receive() external payable {
         if(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime){
@@ -150,7 +151,7 @@ contract Presale is Ownable, Whitelist {
         uint256 _softCap, 
         uint256 _maxBuy, 
         uint256 _minBuy, 
-        uint8 _liquidityPortion
+        uint256 _liquidityPortion
         )external onlyOwner onlyInactive {        
 
         require(isInit == false, 'Sale is already initialized');

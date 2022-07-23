@@ -21,20 +21,18 @@ describe('Sample Test', () => {
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
+        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
+        await approvePresale.wait();
         
         const timestampNow = Math.floor(new Date().getTime()/1000);
         const initSale = await presale.connect(creator).initSale(BigInt(70000000000 * (10**18)), BigInt(50000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 75);
         await initSale.wait();
-        const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
-        await approvePresale.wait();
         console.log('Sale initialized');
 
+        const deposit = await presale.connect(creator).deposit();
+        await deposit.wait();
+        console.log('Tokens deposited.');
         await sleep(50*1000);
-
-        const makeDeposit = await presale.connect(creator).deposit();
-        await makeDeposit.wait();
-        await sleep(10*1000);
-        console.log('Tokens deposited');
 
         const firstContribution = await user1.sendTransaction({
             to: presale.address,
@@ -62,7 +60,7 @@ describe('Sample Test', () => {
         console.log('Sale is concluded');
 
         await sleep(10*1000);
-        
+
         const firstClaim = await presale.connect(user1).claimTokens();
         await firstClaim.wait();
         console.log("User 1 claims");
