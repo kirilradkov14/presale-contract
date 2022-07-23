@@ -32,15 +32,15 @@ contract Presale is Ownable, Whitelist {
     IUniswapV2Router02 UniswapV2Router02;
 
     struct Pool {
-        uint256 liquidityPortion;
-        uint256 softCap;
-        uint256 hardCap;
-        uint256 minBuy;
-        uint256 maxBuy;
+        uint64 startTime;
+        uint64 endTime;    
+        uint8 liquidityPortion;
         uint256 saleRate;
         uint256 listingRate;
-        uint256 startTime;
-        uint256 endTime;    
+        uint256 hardCap;
+        uint256 softCap;
+        uint256 maxBuy;
+        uint256 minBuy;
     }
 
 
@@ -54,17 +54,17 @@ contract Presale is Ownable, Whitelist {
     */
     modifier onlyActive {
         require(block.timestamp >= pool.startTime);
-        require(block.timestamp <= pool.endTime, 'Presale must be active.');
+        require(block.timestamp <= pool.endTime, 'Presale: Sale must be active.');
         _;
     }
 
     modifier onlyInactive {
-        require(block.timestamp < pool.startTime || block.timestamp > pool.endTime || ethRaised >= pool.hardCap, 'Presale must be inactive.');
+        require(block.timestamp < pool.startTime || block.timestamp > pool.endTime || ethRaised >= pool.hardCap, 'Presale: Sale must be inactive.');
         _;
     }
 
     modifier onlyRefund {
-        require(isRefund == true || (block.timestamp > pool.endTime && ethRaised <= pool.hardCap), 'Refund unavailable');
+        require(isRefund == true || (block.timestamp > pool.endTime && ethRaised <= pool.hardCap), 'Presale: Refund unavailable');
         _;
     }
 
@@ -77,11 +77,10 @@ contract Presale is Ownable, Whitelist {
         bool _isWhitelist
         ) {
 
-        require(address(_tokenInstance) != address(0), 'creatorWallet can not be 0 address.');
-        require(_uniswapv2Router != address(0), 'Router must be different from 0 address');
-        require(_uniswapv2Factory != address(0), 'Factory must be different from 0 address');
-        require(_tokenDecimals >= 0, 'Invalid value for decimals');
-        require(_tokenDecimals <= 18, 'Invalid value for decimals');
+        require(_uniswapv2Router != address(0), 'Presale: Router must be different from 0 address');
+        require(_uniswapv2Factory != address(0), 'Presale: Factory must be different from 0 address');
+        require(_tokenDecimals >= 0, 'Presale: Decimals can not be negative');
+        require(_tokenDecimals <= 18, 'Presale: Decimals must not exceed 18');
 
         isInit = false;
         isDeposit = false;
@@ -98,7 +97,7 @@ contract Presale is Ownable, Whitelist {
         UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
 
         tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
-        require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "Error: Uniswap pool already existing.");
+        require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "IUniswap: Uniswap pool already exist.");
     }
 
     event Liquified(
@@ -134,7 +133,7 @@ contract Presale is Ownable, Whitelist {
         if(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime){
             buyTokens(_msgSender());
         } else {
-            revert('Pre-Sale is closed');
+            revert('Presale is closed');
         }
     }
 
@@ -143,27 +142,27 @@ contract Presale is Ownable, Whitelist {
     @dev arguments must be passed in wei (amount*10**18)
     */
     function initSale(
+        uint64 _startTime,
+        uint64 _endTime,
+        uint8 _liquidityPortion,
         uint256 _saleRate, 
-        uint256 _listingRate, 
-        uint256 _startTime, 
-        uint256 _endTime, 
-        uint256 _hardCap, 
-        uint256 _softCap, 
-        uint256 _maxBuy, 
-        uint256 _minBuy, 
-        uint256 _liquidityPortion
+        uint256 _listingRate,
+        uint256 _hardCap,
+        uint256 _softCap,
+        uint256 _maxBuy,
+        uint256 _minBuy
         )external onlyOwner onlyInactive {        
 
-        require(isInit == false, 'Sale is already initialized');
-        require(_startTime >= block.timestamp, 'Start time must exceed current timestamp.');
-        require(_endTime > block.timestamp, 'End time must exceed current timestamp');
-        require(_softCap >= _hardCap / 2, 'Soft cap must be at least 50% of hardcap.');
-        require(_liquidityPortion >= 30, 'At least 30% ethers should go to liquidity .');
-        require(_liquidityPortion <= 100);
-        require(_minBuy < _maxBuy, 'Invalid value for minBuy.');
-        require(_minBuy > 0);
-        require(_saleRate > 0, 'token - ether ratio must be more than 0.');
-        require(_listingRate > 0, 'token - ether ratio must be more than 0.');
+        require(isInit == false, 'Presale: Sale no initialized');
+        require(_startTime >= block.timestamp, 'Presale: Start time must exceed current timestamp.');
+        require(_endTime > block.timestamp, 'Presale: End time must exceed current timestamp');
+        require(_softCap >= _hardCap / 2, 'Presale: Soft cap must be at least 50% of hard cap.');
+        require(_liquidityPortion >= 30, 'Presale: Liquidity portion must be at least 30.');
+        require(_liquidityPortion <= 100, 'Presale: Liquidity portion must not exceed 100.');
+        require(_minBuy < _maxBuy, 'Presale: Min buy must be less than max buy.');
+        require(_minBuy > 0, 'Presale: Min buy must exceed 0.');
+        require(_saleRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
+        require(_listingRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
 
         pool.saleRate = _saleRate;
         pool.listingRate = _listingRate;
@@ -182,8 +181,8 @@ contract Presale is Ownable, Whitelist {
     * Once called the owner deposits tokens into pool
     */
     function deposit() external onlyOwner {
-        require(isDeposit == false, 'Tokens already deposited to the pool.');
-        require(isInit == true, 'Pool not initialized yet');
+        require(!isDeposit, 'Presale: Tokens already deposited to the pool.');
+        require(isInit, 'Presale: Pool not initialized yet');
 
         uint256 tokensForSale = pool.hardCap * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
         presaleTokens = tokensForSale;
@@ -200,10 +199,10 @@ contract Presale is Ownable, Whitelist {
     * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn unused tokens
     */
     function finishSale() external onlyOwner onlyInactive{
-        require(ethRaised >= pool.softCap, 'Soft Cap is not met');
-        require(block.timestamp > pool.startTime, 'Can not finish before start time');
-        require(isFinish == false, 'This sale has already been launched');
-        require(isRefund == false, 'Can not launch during refund process');
+        require(ethRaised >= pool.softCap, 'Presale: Soft Cap is not met.');
+        require(block.timestamp > pool.startTime, 'Presale: Can not finish before start time.');
+        require(!isFinish, 'Presale: This sale has already been launched.');
+        require(!isRefund, 'Presale: Can not launch during refund process.');
 
         uint256 tokensForSale = ethRaised * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
         uint256 tokensForLiquidity = ethRaised * pool.listingRate * pool.liquidityPortion / 100 / (10**18) / (10**(18-tokenDecimals));
@@ -212,7 +211,7 @@ contract Presale is Ownable, Whitelist {
 
         //add liquidity
         (uint amountToken, uint amountETH, ) = UniswapV2Router02.addLiquidityETH{value : _getLiquidityEth()}(address(tokenInstance),tokensForLiquidity, tokensForLiquidity, _getLiquidityEth(), owner(), block.timestamp + 600);
-        require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Error: Method addLiquidityETH failed.");
+        require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "IUniswap: Method addLiquidityETH failed.");
         emit Liquified(address(tokenInstance), address(UniswapV2Router02), UniswapV2Factory.getPair(address(tokenInstance), weth));
 
         //take the Fees
@@ -249,7 +248,7 @@ contract Presale is Ownable, Whitelist {
      require(ethRaised < pool.hardCap)
     */
     function cancelSale() external onlyOwner onlyActive {
-        require(isFinish == false, 'This sale has already finished.');
+        require(!isFinish, 'Presale: This sale has already finished.');
         pool.endTime = 0;
         isRefund = true;
 
@@ -265,8 +264,8 @@ contract Presale is Ownable, Whitelist {
     * Allows participents to claim the tokens they purchased 
     */
     function claimTokens() external onlyInactive {
-        require(isFinish == true, 'Sale is still active');
-        require(!isRefund, 'Cannot claim during refund.');
+        require(isFinish, 'Presale: Sale is still active.');
+        require(!isRefund, 'Presale: Cannot claim during refund.');
 
         uint256 tokensAmount = _getUserTokens(ethContribution[msg.sender]);
         ethContribution[msg.sender] = 0;
@@ -313,7 +312,7 @@ contract Presale is Ownable, Whitelist {
     * If requirements are passed, updates user's token balance based on their eth contribution
     */
     function buyTokens(address _contributor) public payable onlyActive {
-        require(isDeposit, 'No tokens are deposited to the contract');
+        require(isDeposit, 'Presale: No tokens are deposited to the contract.');
 
         uint256 weiAmount = msg.value;
         _checkSaleRequirements(_contributor, weiAmount);
@@ -332,11 +331,11 @@ contract Presale is Ownable, Whitelist {
             require(whitelists[_msgSender()], 'Presale: User not Whitelisted.');
         }
 
-        require(_beneficiary != address(0), 'transfer to 0 address.');
-        require(_amount != 0, "weiAmount is 0");
-        require(_amount >= pool.minBuy, 'minBuy is not met.');
-        require(_amount + ethContribution[_beneficiary] <= pool.maxBuy, 'Max buy limit exceeded.');
-        require(ethRaised + _amount <= pool.hardCap, 'Hard cap is already reached.');
+        require(_beneficiary != address(0), 'Presale: Transfer to 0 address.');
+        require(_amount != 0, "Presale: Wei Amount is 0");
+        require(_amount >= pool.minBuy, 'Presale: Min buy is not met.');
+        require(_amount + ethContribution[_beneficiary] <= pool.maxBuy, 'Presale: Max buy limit exceeded.');
+        require(ethRaised + _amount <= pool.hardCap, 'Presale: Hard cap is already reached.');
         this;
     }
 
