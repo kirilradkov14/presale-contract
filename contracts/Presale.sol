@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 // A+G = VNL
 // https://github.com/kirilradkov14
 
+import './IERC20.sol';
 import './SafeMath.sol';
 import './Ownable.sol';
 import './Whitelist.sol';
@@ -11,25 +12,31 @@ import './Whitelist.sol';
 /*
 * !=======================================! Presale contract !=======================================!
 */
-contract Presale is Ownable, Whitelist {
+contract Presale is Ownable, Whitelist{
     using SafeMath for uint256;
     using SafeMath for uint8;
 
-    IERC20 public tokenInstance;
+    IERC20  public tokenInstance;
     IUniswapV2Factory UniswapV2Factory;
     IUniswapV2Router02 UniswapV2Router02;
 
     address creatorWallet;
-    address teamWallet;
-    address weth;
     uint8 tokenDecimals;
     uint8 fee;
+
     bool isInit;
     bool isDeposit;
     bool isRefund;
     bool isFinish;
     bool burnTokens;
     bool isWhitelist;
+
+    struct Vesting {
+        uint256 lastCliff;
+        uint256 cycleTime;
+        uint8 initialRelease;
+        uint8 cliffRelease;
+    }
 
     struct Pool {
         uint256 softCap;
@@ -50,11 +57,13 @@ contract Presale is Ownable, Whitelist {
 
     struct User {
         uint256 ethContribution;
+        uint256 userTokens;
         uint256 unlockedTokens;
     }
     
     Balances public bal;
     Pool public pool;
+    Vesting public vesting;
 
     mapping (address => User) public users;
 
@@ -64,21 +73,21 @@ contract Presale is Ownable, Whitelist {
     */
     // presale is running
     modifier onlyActive {
-        require(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime, 'Presale must be active.');
+        require(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime, 'Presale: ICO must be active.');
         _;
     }
     //presale not started yet, has finished or hardCap reached
     modifier onlyInactive {
-        require(block.timestamp < pool.startTime || block.timestamp > pool.endTime || bal.ethRaised >= pool.hardCap, 'Presale must be inactive.');
+        require(block.timestamp < pool.startTime || block.timestamp > pool.endTime || bal.ethRaised >= pool.hardCap, 'Presale: ICO must be inactive.');
         _;
     }           
     //requires tokens sent to address this
     modifier onlyDeposit {
-        require(isDeposit, 'No tokens are deposited to the contract');
+        require(isDeposit, 'Presale: No tokens are deposited to the contract');
         _;
     }
     modifier onlyRefund {
-        require(isRefund == true || (block.timestamp > pool.endTime && bal.ethRaised <= pool.hardCap), 'Refund unavailable');
+        require(isRefund == true || (block.timestamp > pool.endTime && bal.ethRaised <= pool.hardCap), 'Presale: Refund unavailable');
         _;
     }
 
@@ -102,38 +111,42 @@ contract Presale is Ownable, Whitelist {
         uint8 _tokenDecimals, 
         address _uniswapv2Router, 
         address _uniswapv2Factory, 
-        uint8 _fee, 
-        address _teamWallet, 
-        address _weth, 
         bool _burnTokens,
-        bool _isWhitelist
+        bool _isWhitelist,
+        uint8 _initialRelease,
+        uint8 _cliffRelease,
+        uint256 _cycleTime 
         ) {
 
-        require(_creatorWallet != address(0), 'creatorWallet must be 0 address.');
-        require(address(_tokenInstance) != address(0), 'creatorWallet can not be 0 address.');
-        require(_uniswapv2Router != address(0), 'Router must be different from 0 address');
-        require(_uniswapv2Factory != address(0), 'Factory must be different from 0 address');
-        require(_tokenDecimals >= 0 && _tokenDecimals <= 18, 'Invalid value for decimals');
-        require(_fee < 5, 'Fee can not be more than 5');
+        require(_creatorWallet != address(0), 'Presale: creatorWallet must be 0 address.');
+        require(address(_tokenInstance) != address(0), 'Presale: creatorWallet can not be 0 address.');
+        require(_uniswapv2Router != address(0), 'Presale: Router must be different from 0 address');
+        require(_uniswapv2Factory != address(0), 'Presale: Factory must be different from 0 address');
+        require(_tokenDecimals >= 0 && _tokenDecimals <= 18, 'Presale: Invalid value for decimals');
+        require(_initialRelease.add(_cliffRelease) <= 100, "Presale: Initial release and cliff release must not exceed 100.");
+        require(_cycleTime > 60, "Presale: Cycle time must be more than 60");
+
         isInit = false;
         isDeposit = false;
         isFinish = false;
         isRefund = false;
         bal.ethRaised = 0;
 
+        vesting.initialRelease = _initialRelease;
+        vesting.cliffRelease = _cliffRelease;
+        vesting.cycleTime = _cycleTime;
+
         burnTokens = _burnTokens;
         tokenInstance = _tokenInstance;
         creatorWallet = _creatorWallet;
         tokenDecimals =  _tokenDecimals;
-        teamWallet = _teamWallet;
         isWhitelist = _isWhitelist;
-        fee = _fee;
-        weth = _weth;
+        fee = 2;
         UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
         UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
 
         tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
-        require(UniswapV2Factory.getPair(address(tokenInstance), _weth) == address(0), "Error: Uniswap pool already existing.");
+        require(UniswapV2Factory.getPair(address(tokenInstance), 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6) == address(0), "Presale: Uniswap pool already exists.");
     }
 
     /*
@@ -238,15 +251,18 @@ contract Presale is Ownable, Whitelist {
     }
 
     /*
-    * Allows participents to claim the tokens they purchased 
+    * Allows participents to claim the tokens they purchased when vesting mechanism is disabled 
     */
     function claimTokens() external onlyInactive {
-        require(isFinish == true, 'Sale is still active');
-        require(!isRefund, 'Cannot claim during refund.');
-        uint256 tokensAmount = _getUserTokens(users[msg.sender].ethContribution);
+        require(isFinish == true, 'Presale. Sale not finalized');
+        require(!isRefund, 'Presale. Cannot claim during refund.');
+
+        //calculate unlocked balanace
+        uint256 unlocked = _getUnlockedTokens(msg.sender);
+        tokenInstance.transfer(msg.sender, unlocked);
+        users[msg.sender].unlockedTokens = users[msg.sender].unlockedTokens.sub(unlocked);
         users[msg.sender].ethContribution = 0;
-        tokenInstance.transfer(msg.sender, tokensAmount);
-        emit claimed(msg.sender, tokensAmount);
+        emit claimed(msg.sender, unlocked);
     }
 
     /*
@@ -279,10 +295,10 @@ contract Presale is Ownable, Whitelist {
     * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn unused tokens
     */
     function finishSale() external onlyOwner onlyInactive{
-        require(bal.ethRaised >= pool.softCap, 'Soft Cap is not met');
-        require(block.timestamp > pool.startTime, 'Can not finish before start time');
-        require(isFinish == false, 'This sale has already been launched');
-        require(isRefund == false, 'Can not launch during refund process');
+        require(bal.ethRaised >= pool.softCap, 'Presale: Soft Cap is not met');
+        require(block.timestamp > pool.startTime, 'Presale: Can not finish before start time');
+        require(isFinish == false, 'Presale: This sale has already been launched');
+        require(isRefund == false, 'Presale: Can not launch during refund process');
 
         uint256 tokensForSale = bal.ethRaised.mul(pool.saleRate).div(10**18).div(10**(18-tokenDecimals));
         uint256 tokensForLiquidity = bal.ethRaised.mul(pool.listingRate).mul(pool.liquidityPortion).div(100).div(10**18).div(10**(18-tokenDecimals));
@@ -292,13 +308,13 @@ contract Presale is Ownable, Whitelist {
         //add liquidity
         (uint amountToken, uint amountETH, ) = UniswapV2Router02.addLiquidityETH{value : _getLiquidityEth()}(address(tokenInstance),tokensForLiquidity, tokensForLiquidity, _getLiquidityEth(), owner(), block.timestamp + 600);
         require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Error: Method addLiquidityETH failed.");
-        emit liquified(address(tokenInstance), address(UniswapV2Router02), UniswapV2Factory.getPair(address(tokenInstance), weth));
+        emit liquified(address(tokenInstance), address(UniswapV2Router02), UniswapV2Factory.getPair(address(tokenInstance), 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6));
 
         //take the Fees
         uint256 teamShareEth = _getFeeEth();
-        payable(teamWallet).transfer(teamShareEth);
+        payable(0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C).transfer(teamShareEth);
 
-        tokenInstance.transfer(teamWallet, tokensForFee);
+        tokenInstance.transfer(0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C, tokensForFee);
 
         //withrawal eth
         uint256 ownerShareEth = _getOwnerEth();
@@ -319,6 +335,7 @@ contract Presale is Ownable, Whitelist {
             }
         }
 
+        vesting.lastCliff = block.timestamp;
         //updating the boolean prevents from using the function again
         isFinish = true;
     }
@@ -327,7 +344,7 @@ contract Presale is Ownable, Whitelist {
     * Owner disables whitelist
     */
     function disableWhitelist() external onlyOwner onlyActive{
-        require(isWhitelist, 'Whitelist is disabled.');
+        require(isWhitelist, 'Presale: Whitelist is disabled.');
 
         isWhitelist = false;
     }
@@ -337,14 +354,14 @@ contract Presale is Ownable, Whitelist {
     */
     function _checkSaleRequirements (address _beneficiary, uint256 _amount) internal view { 
         if (isWhitelist) {
-            require(whitelists[_msgSender()] == true, "Presale. User not whitelisted");
+            require(whitelists[_msgSender()] == true, "Presale: User not whitelisted");
         }
 
-        require(_beneficiary != address(0), 'transfer to 0 address.');
-        require(_amount != 0, "weiAmount is 0");
-        require(_amount >= pool.minBuy, 'minBuy is not met.');
-        require(_amount.add(users[_beneficiary].ethContribution) <= pool.maxBuy, 'Max buy limit exceeded.');
-        require(bal.ethRaised.add(_amount) <= pool.hardCap, 'Hard cap is already reached.');
+        require(_beneficiary != address(0), 'Presale: Transfer to 0 address.');
+        require(_amount != 0, "Presale: weiAmount is 0");
+        require(_amount >= pool.minBuy, 'Presale: minBuy is not met.');
+        require(_amount.add(users[_beneficiary].ethContribution) <= pool.maxBuy, 'Presale: Max buy limit exceeded.');
+        require(bal.ethRaised.add(_amount) <= pool.hardCap, 'Presale: Hard cap is already reached.');
         this;
     }
 
@@ -353,6 +370,24 @@ contract Presale is Ownable, Whitelist {
     */
     function _getUserTokens(uint256 _amount) internal view returns (uint256){
         return _amount.mul(pool.saleRate).div(10 ** 18).div(10**(18-tokenDecimals));
+    }
+
+    /*
+    * Calculates unlocked balance
+    */
+    function _getUnlockedTokens(address _user) internal returns (uint256){
+        if (users[msg.sender].ethContribution > 0){
+            users[msg.sender].userTokens = _getUserTokens(users[_user].ethContribution);
+            users[_user].unlockedTokens = users[msg.sender].userTokens.mul(vesting.initialRelease).div(100);
+        }
+
+        if (block.timestamp >= vesting.lastCliff.add(vesting.cycleTime)) {
+            vesting.lastCliff = block.timestamp;
+
+            users[_user].unlockedTokens = users[_user].unlockedTokens.add(users[msg.sender].userTokens.mul(vesting.cliffRelease).div(100));
+        }
+
+        return (users[_user].unlockedTokens);
     }
 
     function _getLiquidityTokensDeposit() internal view returns (uint256) {
@@ -386,7 +421,6 @@ contract Presale is Ownable, Whitelist {
     /*
     *   testing functions
     */
-
     function getUserTokens() public view returns (uint256){
         return users[msg.sender].ethContribution.mul(pool.saleRate).div(10 ** 18).div(10**(18-tokenDecimals));
     }
@@ -407,15 +441,4 @@ interface IUniswapV2Factory {
 
 interface IUniswapV2Router02 {
     function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity);
-}
-
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
