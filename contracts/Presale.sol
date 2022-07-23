@@ -52,17 +52,17 @@ contract Presale is Ownable, Whitelist {
     /*
     * !=======================================! Modifiers !=======================================!
     */
-    // presale is running
     modifier onlyActive {
         require(block.timestamp >= pool.startTime);
         require(block.timestamp <= pool.endTime, 'Presale must be active.');
         _;
     }
-    //presale not started yet, has finished or hardCap reached
+
     modifier onlyInactive {
         require(block.timestamp < pool.startTime || block.timestamp > pool.endTime || ethRaised >= pool.hardCap, 'Presale must be inactive.');
         _;
     }
+
     modifier onlyRefund {
         require(isRefund == true || (block.timestamp > pool.endTime && ethRaised <= pool.hardCap), 'Refund unavailable');
         _;
@@ -197,6 +197,53 @@ contract Presale is Ownable, Whitelist {
     }
 
     /*
+    * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn unused tokens
+    */
+    function finishSale() external onlyOwner onlyInactive{
+        require(ethRaised >= pool.softCap, 'Soft Cap is not met');
+        require(block.timestamp > pool.startTime, 'Can not finish before start time');
+        require(isFinish == false, 'This sale has already been launched');
+        require(isRefund == false, 'Can not launch during refund process');
+
+        uint256 tokensForSale = ethRaised * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
+        uint256 tokensForLiquidity = ethRaised * pool.listingRate * pool.liquidityPortion / 100 / (10**18) / (10**(18-tokenDecimals));
+        tokensForLiquidity = tokensForLiquidity - (tokensForLiquidity * fee / 100);
+        uint256 tokensForFee = fee * (tokensForSale + tokensForLiquidity) / 100;
+
+        //add liquidity
+        (uint amountToken, uint amountETH, ) = UniswapV2Router02.addLiquidityETH{value : _getLiquidityEth()}(address(tokenInstance),tokensForLiquidity, tokensForLiquidity, _getLiquidityEth(), owner(), block.timestamp + 600);
+        require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Error: Method addLiquidityETH failed.");
+        emit Liquified(address(tokenInstance), address(UniswapV2Router02), UniswapV2Factory.getPair(address(tokenInstance), weth));
+
+        //take the Fees
+        uint256 teamShareEth = _getFeeEth();
+        payable(teamWallet).transfer(teamShareEth);
+
+        tokenInstance.transfer(teamWallet, tokensForFee);
+
+        //withrawal eth
+        uint256 ownerShareEth = _getOwnerEth();
+        if (ownerShareEth > 0) {
+            payable(creatorWallet).transfer(ownerShareEth);
+        }
+
+        //If HC is not reached, burn or refund the remainder
+        if (ethRaised < pool.hardCap) {
+            uint256 remainder = _getTokenDeposit() - (tokensForSale + tokensForLiquidity + tokensForFee);
+            if(burnTokens == true){
+                tokenInstance.transfer(0x000000000000000000000000000000000000dEaD, remainder);
+                emit BurntRemainder(msg.sender, remainder);
+            } else {
+                tokenInstance.transfer(creatorWallet, remainder);
+                emit RefundedRemainder(msg.sender, remainder);
+            }
+        }
+
+        //updating the boolean prevents from using the function again ever
+        isFinish = true;
+    }
+
+    /*
     * The owner can decide to close the sale if it is still active
     NOTE: Creator may call this function even if the Hard Cap is reached, to prevent it use:
      require(ethRaised < pool.hardCap)
@@ -254,52 +301,8 @@ contract Presale is Ownable, Whitelist {
     }
 
     /*
-    * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn unused tokens
+    * Disables WL
     */
-    function finishSale() external onlyOwner onlyInactive{
-        require(ethRaised >= pool.softCap, 'Soft Cap is not met');
-        require(block.timestamp > pool.startTime, 'Can not finish before start time');
-        require(isFinish == false, 'This sale has already been launched');
-        require(isRefund == false, 'Can not launch during refund process');
-
-        uint256 tokensForSale = ethRaised * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
-        uint256 tokensForLiquidity = ethRaised * pool.listingRate * pool.liquidityPortion / 100 / (10**18) / (10**(18-tokenDecimals));
-        tokensForLiquidity = tokensForLiquidity - (tokensForLiquidity * fee / 100);
-        uint256 tokensForFee = fee * (tokensForSale + tokensForLiquidity) / 100;
-
-        //add liquidity
-        (uint amountToken, uint amountETH, ) = UniswapV2Router02.addLiquidityETH{value : _getLiquidityEth()}(address(tokenInstance),tokensForLiquidity, tokensForLiquidity, _getLiquidityEth(), owner(), block.timestamp + 600);
-        require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Error: Method addLiquidityETH failed.");
-        emit Liquified(address(tokenInstance), address(UniswapV2Router02), UniswapV2Factory.getPair(address(tokenInstance), weth));
-
-        //take the Fees
-        uint256 teamShareEth = _getFeeEth();
-        payable(teamWallet).transfer(teamShareEth);
-
-        tokenInstance.transfer(teamWallet, tokensForFee);
-
-        //withrawal eth
-        uint256 ownerShareEth = _getOwnerEth();
-        if (ownerShareEth > 0) {
-            payable(creatorWallet).transfer(ownerShareEth);
-        }
-
-        //If HC is not reached, burn or refund the remainder
-        if (ethRaised < pool.hardCap) {
-            uint256 remainder = _getTokenDeposit() - (tokensForSale + tokensForLiquidity + tokensForFee);
-            if(burnTokens == true){
-                tokenInstance.transfer(0x000000000000000000000000000000000000dEaD, remainder);
-                emit BurntRemainder(msg.sender, remainder);
-            } else {
-                tokenInstance.transfer(creatorWallet, remainder);
-                emit RefundedRemainder(msg.sender, remainder);
-            }
-        }
-
-        //updating the boolean prevents from using the function again ever
-        isFinish = true;
-    }
-
     function disableWhitelist() external onlyOwner{
         require(isWhitelist, 'Presale: Whitelist is already disabled.');
 
