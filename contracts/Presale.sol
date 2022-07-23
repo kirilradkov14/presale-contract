@@ -68,36 +68,6 @@ contract Presale is Ownable, Whitelist {
         _;
     }
 
-    /*
-    *  !=======================================! Events !=======================================!
-    */
-    event Liquified(
-        address indexed _token, 
-        address indexed _router, 
-        address indexed _pair
-        );
-
-    event Canceled(
-        address indexed _inititator, 
-        address indexed _token, 
-        address indexed _presale
-        );
-
-    event Bought(address indexed _buyer, uint256 _tokenAmount);
-
-    event Refunded(address indexed _refunder, uint256 _tokenAmount);
-
-    event Deposited(address indexed _initiator, uint256 _totalDeposit);
-
-    event Claimed(address indexed _participent, uint256 _tokenAmount);
-
-    event RefundedRemainder(address indexed _initiator, uint256 _amount);
-
-    event BurntRemainder(address indexed _initiator, uint256 _amount);
-
-    event Withdraw(address indexed _creator, uint256 _amount);
-    
-
     constructor(
         IERC20 _tokenInstance, 
         uint8 _tokenDecimals, 
@@ -130,7 +100,32 @@ contract Presale is Ownable, Whitelist {
         tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
         require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "Error: Uniswap pool already existing.");
     }
+    
+    event Liquified(
+        address indexed _token, 
+        address indexed _router, 
+        address indexed _pair
+        );
 
+    event Canceled(
+        address indexed _inititator, 
+        address indexed _token, 
+        address indexed _presale
+        );
+
+    event Bought(address indexed _buyer, uint256 _tokenAmount);
+
+    event Refunded(address indexed _refunder, uint256 _tokenAmount);
+
+    event Deposited(address indexed _initiator, uint256 _totalDeposit);
+
+    event Claimed(address indexed _participent, uint256 _tokenAmount);
+
+    event RefundedRemainder(address indexed _initiator, uint256 _amount);
+
+    event BurntRemainder(address indexed _initiator, uint256 _amount);
+
+    event Withdraw(address indexed _creator, uint256 _amount);
     /*
     * Fallback function reverts ethers sent to this address whenever requirements are not met
     */
