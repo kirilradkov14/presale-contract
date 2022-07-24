@@ -13,7 +13,7 @@ interface IERC20 {
     function allowance(address owner, address spender) external view returns (uint256);
     function approve(address spender, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    
+
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
@@ -190,7 +190,7 @@ contract Presale is Ownable, Whitelist {
     */
     function deposit() external onlyOwner {
         require(!isDeposit, 'Presale: Tokens already deposited to the pool.');
-        require(isInit, 'Presale: Pool not initialized yet');
+        require(isInit, 'Presale: Pool not initialized yet.');
 
         uint256 tokensForSale = pool.hardCap * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
         presaleTokens = tokensForSale;
