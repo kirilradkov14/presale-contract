@@ -17,7 +17,7 @@ describe('Presale testing', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, false);
+        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);
         await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
@@ -84,8 +84,7 @@ describe('Presale testing', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, false);
-        await presale.deployed();
+        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);        await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
         const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
@@ -153,8 +152,7 @@ describe('Presale testing', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, false);
-        await presale.deployed();
+        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);        await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
         const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
@@ -220,8 +218,7 @@ describe('Presale testing', () => {
         console.log("Token at: " + token.address);
     
         const presaleFactory = await ethers.getContractFactory("Presale");
-        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, false);
-        await presale.deployed();
+        const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);        await presale.deployed();
         console.log('Presale at: '  + presale.address);
 
         const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
@@ -294,8 +291,7 @@ describe('Presale testing', () => {
             console.log("Token at: " + token.address);
         
             const presaleFactory = await ethers.getContractFactory("Presale");
-            const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, true);
-            await presale.deployed();
+            const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);            await presale.deployed();
             console.log('Presale at: '  + presale.address);
     
             const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
@@ -365,9 +361,7 @@ describe('Presale testing', () => {
             console.log("Token at: " + token.address);
         
             const presaleFactory = await ethers.getContractFactory("Presale");
-            const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', true, true);
-            await presale.deployed();
-            console.log('Presale at: '  + presale.address);
+            const presale = await presaleFactory.deploy(token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f','0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', true, false);            console.log('Presale at: '  + presale.address);
     
             const approvePresale = await token.connect(creator).approve(presale.address, BigInt(1000000000000*(10**18)));
             await approvePresale.wait();

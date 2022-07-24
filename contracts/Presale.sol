@@ -3,10 +3,27 @@ pragma solidity ^0.8.4;
 // A+G = VNL
 // https://github.com/kirilradkov14
 
-import './IUniswap.sol';
-import './IERC20.sol';
 import './Ownable.sol';
 import './Whitelist.sol';
+
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+interface IUniswapV2Factory {
+    function getPair(address tokenA, address tokenB) external view returns (address pair);
+}
+
+interface IUniswapV2Router02 {
+    function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+}
 
 contract Presale is Ownable, Whitelist {
 
@@ -17,8 +34,8 @@ contract Presale is Ownable, Whitelist {
     bool burnTokens;
     bool isWhitelist;
     address creatorWallet;
-    address constant teamWallet = 0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C;
-    address constant weth = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
+    address  teamWallet = 0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C;
+    address  weth = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
     uint8 constant fee = 2;
     uint8 tokenDecimals;
     uint256 presaleTokens;
@@ -65,7 +82,9 @@ contract Presale is Ownable, Whitelist {
         IERC20 _tokenInstance, 
         uint8 _tokenDecimals, 
         address _uniswapv2Router, 
-        address _uniswapv2Factory, 
+        address _uniswapv2Factory,
+        address _teamWallet,
+        address _weth,
         bool _burnTokens,
         bool _isWhitelist
         ) {
@@ -81,6 +100,8 @@ contract Presale is Ownable, Whitelist {
         isRefund = false;
         ethRaised = 0;
 
+        teamWallet = _teamWallet;
+        weth = _weth;
         burnTokens = _burnTokens;
         isWhitelist = _isWhitelist;
         tokenInstance = _tokenInstance;
