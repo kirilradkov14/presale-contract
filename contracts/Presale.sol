@@ -43,15 +43,11 @@ contract Presale is Ownable, Whitelist {
         uint256 minBuy;
     }
 
-
-    Pool public pool;
+    Pool pool;
 
     mapping(address => uint256) public ethContribution;
 
 
-    /*
-    * !=======================================! Modifiers !=======================================!
-    */
     modifier onlyActive {
         require(block.timestamp >= pool.startTime);
         require(block.timestamp <= pool.endTime, 'Presale: Sale must be active.');
@@ -164,15 +160,8 @@ contract Presale is Ownable, Whitelist {
         require(_saleRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
         require(_listingRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
 
-        pool.saleRate = _saleRate;
-        pool.listingRate = _listingRate;
-        pool.startTime = _startTime;
-        pool.endTime = _endTime;
-        pool.hardCap = _hardCap;
-        pool.softCap = _softCap;
-        pool.liquidityPortion = _liquidityPortion;
-        pool.minBuy = _minBuy;
-        pool.maxBuy = _maxBuy;
+        Pool memory newPool = Pool(_startTime, _endTime, _liquidityPortion, _saleRate, _listingRate, _hardCap, _softCap, _maxBuy, _minBuy);
+        pool = newPool;
 
         isInit = true;
     }
