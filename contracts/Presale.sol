@@ -36,7 +36,7 @@ contract Presale is Ownable, Whitelist {
     address creatorWallet;
     address teamWallet;
     address weth;
-    uint8 constant fee = 2;
+    uint8 constant fee = 1;
     uint8 tokenDecimals;
     uint256 presaleTokens;
     uint256 ethRaised;
