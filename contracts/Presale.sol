@@ -8,9 +8,6 @@ import './IERC20.sol';
 import './Ownable.sol';
 import './Whitelist.sol';
 
-/*
-* !=======================================! Presale contract !=======================================!
-*/
 contract Presale is Ownable, Whitelist {
 
     bool isInit;
@@ -180,12 +177,12 @@ contract Presale is Ownable, Whitelist {
         tokenInstance.transferFrom(msg.sender, address(this), totalDeposit);
         emit Deposited(msg.sender, totalDeposit);
 
-        //updating the boolean prevents from using the function again ever
+        //updating the boolean prevents from using the function again
         isDeposit = true;
     }
 
     /*
-    * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn unused tokens
+    * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn/refund unused tokens
     */
     function finishSale() external onlyOwner onlyInactive{
         require(ethRaised >= pool.softCap, 'Presale: Soft Cap is not met.');
@@ -227,7 +224,7 @@ contract Presale is Ownable, Whitelist {
             }
         }
 
-        //updating the boolean prevents from using the function again ever
+        //updating the boolean prevents from using the function again
         isFinish = true;
     }
 
