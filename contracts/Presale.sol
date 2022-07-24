@@ -34,8 +34,8 @@ contract Presale is Ownable, Whitelist {
     bool burnTokens;
     bool isWhitelist;
     address creatorWallet;
-    address  teamWallet = 0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C;
-    address  weth = 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6;
+    address teamWallet;
+    address weth;
     uint8 constant fee = 2;
     uint8 tokenDecimals;
     uint256 presaleTokens;
