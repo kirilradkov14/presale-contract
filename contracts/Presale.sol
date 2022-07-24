@@ -13,6 +13,7 @@ interface IERC20 {
     function allowance(address owner, address spender) external view returns (uint256);
     function approve(address spender, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
@@ -36,7 +37,7 @@ contract Presale is Ownable, Whitelist {
     address creatorWallet;
     address teamWallet;
     address weth;
-    uint8 constant fee = 1;
+    uint8 constant fee = 2;
     uint8 tokenDecimals;
     uint256 presaleTokens;
     uint256 ethRaised;
