@@ -20,10 +20,21 @@ interface IERC20 {
 
 interface IUniswapV2Factory {
     function getPair(address tokenA, address tokenB) external view returns (address pair);
+    function createPair(address tokenA, address tokenB) external returns (address pair);
 }
 
 interface IUniswapV2Router02 {
     function addLiquidityETH(address token, uint amountTokenDesired, uint amountTokenMin, uint amountETHMin, address to, uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+}
+
+interface IUniswapV2Pair {
+  function balanceOf(address owner) external view returns (uint);
+  function approve(address spender, uint value) external returns (bool);
+  function transfer(address to, uint value) external returns (bool);
+}
+
+interface ILocker {
+    function lockTokens(address token, uint256 amount, uint256 unlockTime) external returns(uint256);
 }
 
 contract Presale is Ownable, Whitelist {
@@ -43,12 +54,15 @@ contract Presale is Ownable, Whitelist {
     uint256 ethRaised;
 
     IERC20 public tokenInstance;
+    ILocker locker;
     IUniswapV2Factory UniswapV2Factory;
     IUniswapV2Router02 UniswapV2Router02;
+    IUniswapV2Pair UniswapV2Pair;
 
     struct Pool {
         uint64 startTime;
-        uint64 endTime;    
+        uint64 endTime;
+        uint64 unlockTime;    
         uint8 liquidityPortion;
         uint256 saleRate;
         uint256 listingRate;
@@ -86,6 +100,7 @@ contract Presale is Ownable, Whitelist {
         address _uniswapv2Factory,
         address _teamWallet,
         address _weth,
+        address _lockerAddress,
         bool _burnTokens,
         bool _isWhitelist
         ) {
@@ -108,11 +123,16 @@ contract Presale is Ownable, Whitelist {
         tokenInstance = _tokenInstance;
         creatorWallet = address(payable(msg.sender));
         tokenDecimals =  _tokenDecimals;
+        locker = ILocker(_lockerAddress);
         UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
         UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
 
-        tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
         require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "IUniswap: Uniswap pool already exist.");
+        IUniswapV2Pair(UniswapV2Factory.createPair(address(tokenInstance), weth));
+        UniswapV2Pair = IUniswapV2Pair(UniswapV2Factory.getPair(address(tokenInstance), weth));
+
+        UniswapV2Pair.approve(_lockerAddress, 1000000000*10**18);
+        tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
     }
 
     event Liquified(
@@ -154,11 +174,12 @@ contract Presale is Ownable, Whitelist {
 
     /*
     * Initiates the arguments of the sale
-    @dev arguments must be passed in wei (amount*10**18)
+    @dev arguments must be pa   ssed in wei (amount*10**18)
     */
     function initSale(
         uint64 _startTime,
         uint64 _endTime,
+        uint64 _unlockTime,
         uint8 _liquidityPortion,
         uint256 _saleRate, 
         uint256 _listingRate,
@@ -179,7 +200,7 @@ contract Presale is Ownable, Whitelist {
         require(_saleRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
         require(_listingRate > 0, 'Presale: Token - Ether ratio must be more than 0.');
 
-        Pool memory newPool = Pool(_startTime, _endTime, _liquidityPortion, _saleRate, _listingRate, _hardCap, _softCap, _maxBuy, _minBuy);
+        Pool memory newPool = Pool(_startTime, _endTime, _unlockTime, _liquidityPortion, _saleRate, _listingRate, _hardCap, _softCap, _maxBuy, _minBuy);
         pool = newPool;
 
         isInit = true;
@@ -246,6 +267,7 @@ contract Presale is Ownable, Whitelist {
             }
         }
 
+        locker.lockTokens(address(UniswapV2Pair), UniswapV2Pair.balanceOf(msg.sender), pool.unlockTime);
         //updating the boolean prevents from using the function again
         isFinish = true;
     }
