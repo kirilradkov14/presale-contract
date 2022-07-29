@@ -501,9 +501,5 @@ describe('Presale testing', () => {
         const thirdClaim = await presale.connect(user3).claimTokens();
         await thirdClaim.wait();
         console.log("User 3 claims");
-
-        const getBall = await presale.getBall();
-        await getBall.wait();
-        console.log(getBall);
     });
 });
