@@ -2,7 +2,7 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: Unlicensed
 // A+G = VNL
 // https://github.com/kirilradkov14
-
+import "hardhat/console.sol";
 import './Ownable.sol';
 import './Whitelist.sol';
 
@@ -53,12 +53,6 @@ contract Presale is Ownable, Whitelist {
     uint256 presaleTokens;
     uint256 ethRaised;
 
-    IERC20 public tokenInstance;
-    ILocker locker;
-    IUniswapV2Factory UniswapV2Factory;
-    IUniswapV2Router02 UniswapV2Router02;
-    IUniswapV2Pair UniswapV2Pair;
-
     struct Pool {
         uint64 startTime;
         uint64 endTime;
@@ -72,6 +66,11 @@ contract Presale is Ownable, Whitelist {
         uint256 minBuy;
     }
 
+    IERC20 public tokenInstance;
+    ILocker locker;
+    IUniswapV2Factory UniswapV2Factory;
+    IUniswapV2Router02 UniswapV2Router02;
+    IUniswapV2Pair UniswapV2Pair;
     Pool pool;
 
     mapping(address => uint256) public ethContribution;
@@ -217,7 +216,7 @@ contract Presale is Ownable, Whitelist {
         presaleTokens = tokensForSale;
         uint256 totalDeposit = _getTokenDeposit();
 
-        tokenInstance.transferFrom(msg.sender, address(this), totalDeposit);
+        require(tokenInstance.transferFrom(msg.sender, address(this), totalDeposit), 'Presale: Deposit failed.');
         emit Deposited(msg.sender, totalDeposit);
 
         //updating the boolean prevents from using the function again
@@ -233,6 +232,7 @@ contract Presale is Ownable, Whitelist {
         require(!isFinish, 'Presale: This sale has already been launched.');
         require(!isRefund, 'Presale: Can not launch during refund process.');
 
+        //get the used amount of tokens
         uint256 tokensForSale = ethRaised * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
         uint256 tokensForLiquidity = ethRaised * pool.listingRate * pool.liquidityPortion / 100 / (10**18) / (10**(18-tokenDecimals));
         tokensForLiquidity = tokensForLiquidity - (tokensForLiquidity * fee / 100);
@@ -247,7 +247,7 @@ contract Presale is Ownable, Whitelist {
         uint256 teamShareEth = _getFeeEth();
         payable(teamWallet).transfer(teamShareEth);
 
-        tokenInstance.transfer(teamWallet, tokensForFee);
+        require(tokenInstance.transfer(teamWallet, tokensForFee), 'Presale: Token transfer fee failed.');
 
         //withrawal eth
         uint256 ownerShareEth = _getOwnerEth();
@@ -259,10 +259,10 @@ contract Presale is Ownable, Whitelist {
         if (ethRaised < pool.hardCap) {
             uint256 remainder = _getTokenDeposit() - (tokensForSale + tokensForLiquidity + tokensForFee);
             if(burnTokens == true){
-                tokenInstance.transfer(0x000000000000000000000000000000000000dEaD, remainder);
+                require(tokenInstance.transfer(0x000000000000000000000000000000000000dEaD, remainder), 'Presale: Remainder token burn failed.');
                 emit BurntRemainder(msg.sender, remainder);
             } else {
-                tokenInstance.transfer(creatorWallet, remainder);
+                require(tokenInstance.transfer(creatorWallet, remainder), 'Presale: Remainder token refund failed.');
                 emit RefundedRemainder(msg.sender, remainder);
             }
         }
@@ -299,7 +299,7 @@ contract Presale is Ownable, Whitelist {
 
         uint256 tokensAmount = _getUserTokens(ethContribution[msg.sender]);
         ethContribution[msg.sender] = 0;
-        tokenInstance.transfer(msg.sender, tokensAmount);
+        require(tokenInstance.transfer(msg.sender, tokensAmount), 'Presale: Claim failed.');
         emit Claimed(msg.sender, tokensAmount);
     }
 
@@ -324,7 +324,7 @@ contract Presale is Ownable, Whitelist {
     function withrawTokens() external onlyOwner onlyInactive onlyRefund {
         if (tokenInstance.balanceOf(address(this)) > 0) {
             uint256 tokenDeposit = _getTokenDeposit();
-            tokenInstance.transfer(msg.sender, tokenDeposit);
+            require(tokenInstance.transfer(msg.sender, tokenDeposit), 'Presale: Withdraw failed.');
             emit Withdraw(msg.sender, tokenDeposit);
         }
     }
