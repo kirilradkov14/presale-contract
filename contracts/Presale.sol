@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: Unlicensed
 // A+G = VNL
 // https://github.com/kirilradkov14
-import "hardhat/console.sol";
 import './Ownable.sol';
 import './Whitelist.sol';
 

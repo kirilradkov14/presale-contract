@@ -17,8 +17,8 @@ async function main() {
   const token = await Token.deploy();
   await token.deployed();
 
-  const Presale = await hre.ethers.getContractFactory("Presale");
-  const presale = await Presale.deploy('0x3f78A4125fE0A26BA051903e07118b9e99AB3B49', token.address, 18, '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 2, '0xced1cB80C96D4b98DbcBbD20af69A5396Ec3507C', '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', false);
+  const presaleFactory = await hre.ethers.getContractFactory("Presale");
+  const presale = await presaleFactory.deploy(token.address, 18, 'Router', 'Factory', 'enter your marketing address here', 'enter the WBNB address here', true, false);
   await presale.deployed();
   const timestampNow = Math.floor(new Date().getTime()/1000);
   const initSale = await presale.initSale(BigInt(70000000000 * (10**18)), BigInt(90000000000*(10**18)), timestampNow + 35, timestampNow + 450, BigInt(3000000000000000), BigInt(2000000000000000), BigInt(3000000000000000), BigInt(3000000000000), 100);

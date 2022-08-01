@@ -71,5 +71,10 @@ This smart contract is a representation of a completely decentralized crowdfundi
 
  `_checkSaleRequirements`  - on call, checks whether the requirements are met or not (presale is active, user is whitelisted, caps are met, sale is initialized and tokens are deposited)
 
+ ## Technologies used:
+ - Solidity
+ - Hardhat
+ - EthersJS
+
 ## Tests
 - The uploaded test includes every possible scenario, detailed tests on all functions one by one are not included.
