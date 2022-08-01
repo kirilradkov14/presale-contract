@@ -6,80 +6,66 @@ The recent years has shown a significant growth in funds raised by ICO (Initial 
 
 
 ## How it works ?
-#### The creator deploys the contract with the following args:
-- _tokenInstance - Token address
-- _tokenDecimals - Token decimals
+#### The fundraiser deploys the contract with the following args:
+- _tokenInstance - the address of the token that's beeing sold
+- _tokenDecimals - the decimals of the same token
 - _uniswapv2Router - UniswapV2 Router
 - _uniswapv2Factory - UniswapV2 Factory
-- _burnToken - when true burns the remaining tokens if the HardCap is not reached, when false refunds to the presale creator
-#### The creator then initiates the sale, passing the following args:
-- _saleRate - Tokens for 1 ETH on presale
-- _listingRate - Tokens for 1 ETH on Uniswap
-- _startTime - start of the sale
-- _endTime - end of the sale
-- _hardCap - the fundraising goal in ETH
-- _softCap - the minimum raised amount of ETH required for the sale to be successful
-- _maxBuy - maximum ETH amount a user can contribute to the sale
-- _minBuy - minimum ETH amount a user can contribute to the sale
-- _liquidityPortion - Liquidity percentage 
-####  The creator deposits the tokens to the pool
+- _burnToken - burn or refund the unsold tokens option
+- _isWhitelist - Whitelist option
+#### The fundraiser initiates the Pool options:
+- _saleRate - Token amount for paying 1 ETH on ICO.
+- _listingRate - Token amount for paying 1 ETH on Uniswap.
+- _startTime - The starting time of the sale. (Timestamp).
+- _endTime - The ending time of the sale. (Timestamp).
+- _hardCap - The fundraising goal.
+- _softCap - The minimum raised amount of ETH required for ICO to be successful.
+- _maxBuy - Maximum amount that an eligible user can contribute to the ICO.
+- _minBuy - Minimum amount that an eligible user can contribute to the ICO.
+- _liquidityPortion - Percent of the funds raised in this sale that will be used as liquidity on Uniswap. (Must be at least 30).
+####  The fundraiser deposits the tokens to the pool
 #### After the tokens are deposited users can buy by sending ETH to the contract address
-- if the sale requirements are passed, they will receive tokens based on their contribution
-- if not the EVM will revert the transaction
+- If the sale requirements are passed, they will receive tokens based on their ETH contribution.
+- If not the EVM will revert the transaction.
 #### If the HC is reached:
-- The creator finishes the sale, provides liquidity to uniswap, pays fee to the team and withraws the raised funds
-- The contributors can now claim their tokens
+- The fundraiser finishes the sale. By doing this the contract will automatically enable users to claim tokens, provide liquidity to Uniswap, pay the platform fees and withdrawal the funds.
 #### If the SC is reached and sale expires:
-- The creator finishes the sale, provides liquidity to uniswap, pays fee to the team and withraws the raised funds
-- The contributors can now claim their tokens
-- The remaining tokens in the contract are either burnt or sent back to the creator depending on the option chosen
+- The fundraiser finishes the sale. By doing this the contract will automatically enable users to claim tokens, provide liquidity to Uniswap, pay the platform fees and withdrawal the funds.
+- The remaining tokens will either be burnt or refunded to the fundraiser (Depending on the chosen option).
 #### If the sale is canceled:
-- The creator withraws the deposited tokens
-- The contributors can now claim their ETH back
+- The fundraiser withdrawals the deposited tokens to the contract. The user are now eligible to refund their ETH contribution.
 #### If the sale fails to reach SC: 
-- The contributors can now claim their ETH back
-- The creator can withraw the deposited tokens
+- The fundraiser withdrawals the deposited tokens to the contract. The user are now eligible to refund their ETH contribution.
 
 
 ## Features
-#### Owner can:
-- choose the sale rates and args
-- call the finishSale function if either the HC is reached or SC is reached and sale time expired
-- cancel the sale 
-- withrawal back his tokens if the sale is unsuccessful
-- disable WL
-
-### User can:
-- Contribute to the ICO and receive proportional amount of tokens
-- Claim their tokens if the sale is successful
-- Refund their investment if the sale is unsuccesful
+- Completely decentralized ICO Protocol.
+- Whitelist functionality.
+- Liquidity automatically added upon finalization.
 
 
 ## Functions
- `constructor`  - takes args and deploys contract
+ `constructor`  - deploys contract with the passed args
 
- `initSale`  - take args - _saleRate, _listingRate, _hardCap, _softCap, _minBuy, _maxBuy amount must be in wei
+ `initSale`  - owner choses Pool option
 
  `fallback function`  - allows users to contribute only when the sale is active and requirements are passed
 
- `deposit`  - calculates the amount and deposits them into contract
+ `deposit`  - called by the owner to deposit the required token amount for the presale into the contract.
 
- `cancelSale`  - allows the creator to cancel the sale and start refund if the sale is still active
+ `cancelSale`  - allows the owner to cancel the sale and start a refund process
 
  `buyTokens`  - used to buy tokens based on the msg value if requirements are passed
 
- `claimTokens`  - used to claim the purchased tokens after the sale is completed
+ `claimTokens`  - called by users for claiming the tokens
 
- `refund`  - used to refund the contributed ETH after the sale fails
+ `refund`  - called by users for refunding their contribution upon sale failure
 
- `withrawTokens`  - allows creator to withraw the deposited tokens to the contract once the sale fails
+ `withrawTokens`  - called by owner to withdraw the deposited tokens upon sale failure
 
- `finishSale`  - allows the creator to finish the sale, provide liquidity, pay fees, withraw raised funds and burn/refund the remaining tokens if the hc is not reached
+ `finishSale`  - called by owner when the fundrasing requirements are met, once called - liquidity is provided, users can claim, fees are paid to the platform and owner can withdraw the raised ETH.
 
- `_checkSaleRequirements`  - checks if the requirements are met
+ `_checkSaleRequirements`  - on call, checks whether the requirements are met or not (presale is active, user is whitelisted, caps are met, sale is initialized and tokens are deposited)
 
 ## Tests
-1. Pass args, deposit tokens, reach HC, finish sale, claim
-2. Pass args, deposit tokens, reach sc, wait sale to finish, finish sale, claim
-3. Pass args, deposit tokens, cancel sale, start refund
-4. Pass args, deposit tokens, fail to reach SC, wait to finish, refund
+- The uploaded test includes every possible scenario, detailed tests on all functions one by one are not included.

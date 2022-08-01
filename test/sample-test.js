@@ -424,5 +424,5 @@ describe('Presale testing', () => {
             await thirdClaim.wait();
             console.log("User 3 claims");
         });   
-        })
- })
+        });
+ });
