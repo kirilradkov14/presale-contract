@@ -2,7 +2,11 @@
 
 
 ## Intoduction
-The recent years has shown a significant growth in funds raised by ICO (Initial Coin Offerings) as more and more projects are being launched on daily basis. The quick success of the fundraisings in the crypto space left the door open for countless scams and rugpulls. This smart contract presents a decentralized crowdfunding model, where the start up owner can offer tokens for sale to its earliest adopters and raise initial funds to kickstart the project. After the sale is concluded the contract adds trading liquidity to an AMM. If the ICO fails to reach its Soft Cap or the owner choses to cancel it, contributors can refund their ETH and the owner will have his tokens sent back to his wallet.
+Following the astonishing growth of the blockchain industry during the last few years, many brand new projects are being developed every single day. To start a web3 project, however, the team behind will need funds for further development and marketing inquiries. Many projects are creating a utility token, that they sell at low rpice to the first adopters who had shown interest to the idea in exchange for initial funds and that's the idea behind the initial coin offerings(ICO's). Many scammers however became aware of an opportunity where they can sell tokens and then dissappear without even providing liquidity to AMM(Automated Market Maker, such as Uniswap) or CEX(Centralized Exchange, such as Binance). Nowadays it is almost impossible for someone who is new to the space to distinguish which project is ligit and which not as many scammers just create a fake website, raise the funds there and shut everything down after. This is where the decentralized ICO contracts come to an aid.
+
+
+## Goal
+This smart contract is a representation of a completely decentralized crowdfunding protocol, aiming to provide a safe and fair distribution of tokens and ETH during an ICO process. The idea behind is the implementation of a faster, easier, more efficient and more secure way for how to raise funds in order to kickstart your blockchain project.
 
 
 ## How it works ?
