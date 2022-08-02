@@ -73,7 +73,7 @@ contract Presale is Ownable, Whitelist {
     }
 
     modifier onlyRefund {
-        require(isRefund == true || (block.timestamp > pool.endTime && ethRaised <= pool.hardCap), 'Presale: Refund unavailable');
+        require(isRefund == true || (block.timestamp > pool.endTime && ethRaised <= pool.softCap), 'Presale: Refund unavailable');
         _;
     }
 

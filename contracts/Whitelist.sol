@@ -9,14 +9,14 @@ abstract contract Whitelist is Ownable{
 
     mapping(address => bool) whitelists;
 
-    function addAddress(address _user) external onlyOwner{
+    function wlAddress(address _user) external onlyOwner{
         require(whitelists[_user] == false, "Whitelist. Address is already whitelisted");
         require(_user != address(0), 'Whitelist. Address can not be 0 address.');
 
         whitelists[_user] = true;
     }
 
-    function addMultipleAddresses(address[] calldata  _users) external onlyOwner {
+    function wlMultipleAddresses(address[] calldata  _users) external onlyOwner {
         for (uint i = 0; i < _users.length; i++){
             whitelists[_users[i]] = true;
         }
@@ -32,14 +32,6 @@ abstract contract Whitelist is Ownable{
     function removeMultipleAddresses(address[] calldata  _users) external onlyOwner {
         for (uint i = 0; i < _users.length; i++){
             whitelists[_users[i]] = false;
-        }
-    }
-    
-    function _checkIfWhitelist(address _user) public view returns (bool) {
-        if (whitelists[_user] == true) {
-            return true;
-        } else {
-            return false;
         }
     }
 }
