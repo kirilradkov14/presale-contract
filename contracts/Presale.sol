@@ -291,10 +291,10 @@ contract Presale is Ownable, Whitelist {
             if (refundAmount > 0) {
                 address payable refunder = payable(msg.sender);
                 refunder.transfer(refundAmount);
-                ethContribution[msg.sender] = 0;
                 emit Refunded(refunder, refundAmount);
             }
         }
+        ethContribution[msg.sender] = 0;
     }
 
     /*
