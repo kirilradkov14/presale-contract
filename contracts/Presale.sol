@@ -286,11 +286,12 @@ contract Presale is Ownable, Whitelist {
     */
     function refund() external onlyInactive onlyRefund{
         uint256 refundAmount = ethContribution[msg.sender];
-        
+
         if (address(this).balance >= refundAmount) {
             if (refundAmount > 0) {
                 address payable refunder = payable(msg.sender);
                 refunder.transfer(refundAmount);
+                ethContribution[msg.sender] = 0;
                 emit Refunded(refunder, refundAmount);
             }
         }
@@ -359,6 +360,7 @@ contract Presale is Ownable, Whitelist {
         value = value - (value * fee / 100);
         return value / (10**18) / (10**(18-tokenDecimals));
     }
+    
     function _getFeeEth() internal view returns (uint256) {
         return (ethRaised * fee / 100);
     }
@@ -373,6 +375,7 @@ contract Presale is Ownable, Whitelist {
         uint256 liquidityEthFee = _getLiquidityEth();
         return(ethRaised - (etherFee + liquidityEthFee));
     }
+    
     function _getTokenDeposit() internal view returns (uint256){
         uint256 tokensForSale = pool.hardCap * pool.saleRate / (10**18) / (10**(18-tokenDecimals));
         uint256 tokensForLiquidity = _getLiquidityTokensDeposit();
