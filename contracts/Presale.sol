@@ -326,10 +326,10 @@ contract Presale is Ownable, Whitelist {
     */
     function refund() external onlyInactive onlyRefund{
         uint256 refundAmount = ethContribution[msg.sender];
-        ethContribution[msg.sender] = 0;
 
         if (address(this).balance >= refundAmount) {
             if (refundAmount > 0) {
+                ethContribution[msg.sender] = 0;
                 address payable refunder = payable(msg.sender);
                 refunder.transfer(refundAmount);
                 emit Refunded(refunder, refundAmount);
