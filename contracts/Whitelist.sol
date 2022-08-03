@@ -1,17 +1,18 @@
+// solhint-disable-next-line
 pragma solidity ^0.8.4;
 // SPDX-License-Identifier: Unlicensed
 // A+G = VNL
 // https://github.com/kirilradkov14
 
-import './Ownable.sol';
+import "./Ownable.sol";
 
 abstract contract Whitelist is Ownable{
 
-    mapping(address => bool) whitelists;
+    mapping(address => bool) public whitelists;
 
     function wlAddress(address _user) external onlyOwner{
-        require(whitelists[_user] == false, "Whitelist. Address is already whitelisted");
-        require(_user != address(0), 'Whitelist. Address can not be 0 address.');
+        require(whitelists[_user] == false, "Address already WL");
+        require(_user != address(0), "Can not WL 0 address");
 
         whitelists[_user] = true;
     }
@@ -23,8 +24,8 @@ abstract contract Whitelist is Ownable{
     }
 
     function removeAddress(address _user) external onlyOwner {
-        require(whitelists[_user] == true, "Whitelist. Address is already whitelisted");
-        require(_user != address(0), 'Whitelist. Address can not be 0 address.');
+        require(whitelists[_user] == true, "User not WL");
+        require(_user != address(0), "Can not delist 0 address");
 
          whitelists[_user] = false;
     }
