@@ -47,6 +47,11 @@ This smart contract is a representation of a completely decentralized crowdfundi
 - Whitelist functionality.
 - Liquidity automatically added upon finalization.
 
+ ## Technologies used:
+ - Solidity
+ - Hardhat
+ - EthersJS
+ - solhint
 
 ## Functions
  `constructor`  - deploys contract with the passed args
@@ -70,11 +75,6 @@ This smart contract is a representation of a completely decentralized crowdfundi
  `finishSale`  - called by owner when the fundrasing requirements are met, once called - liquidity is provided, users can claim, fees are paid to the platform and owner can withdraw the raised ETH.
 
  `_checkSaleRequirements`  - on call, checks whether the requirements are met or not (presale is active, user is whitelisted, caps are met, sale is initialized and tokens are deposited)
-
- ## Technologies used:
- - Solidity
- - Hardhat
- - EthersJS
 
 ## Tests
 - The uploaded test includes every possible scenario, detailed tests on all functions one by one are not included.
