@@ -198,10 +198,13 @@ contract Presale is Ownable, Whitelist {
         require(_listingRate > 0, "Invalid listing rate.");
 
         Pool memory newPool = Pool(
-            _startTime, _endTime, 
-            _liquidityPortion, _saleRate, 
+            _startTime,
+            _endTime, 
+            _liquidityPortion,
+            _saleRate, 
             _listingRate, 
-            _hardCap, _softCap, 
+            _hardCap,
+            _softCap, 
             _maxBuy, 
             _minBuy
             );
