@@ -1,10 +1,5 @@
 # ICO Crowdfunding contract V1
 
-
-## Intoduction
-Following the astonishing growth of the blockchain industry during the last few years, many brand new projects are being developed every single day. When starting a web3 project, however, the team behind needs funds for further development and marketing inquiries. Many projects create a utility token, that they sell at low price to the first adopters who had shown interest to the idea in exchange for initial funds and that's the idea behind the initial coin offerings(ICO's). Many scammers however became aware of an opportunity where they can sell tokens and then dissappear without even providing liquidity to AMM(Automated Market Maker, such as Uniswap) or CEX(Centralized Exchange, such as Binance). Nowadays it is almost impossible for someone who is new to the space to distinguish which project is ligit and which not as many scammers just create a fake website, raise the funds there and shut everything down after. This is where the decentralized ICO contracts come to an aid.
-
-
 ## Goal
 This smart contract is a representation of a completely decentralized crowdfunding protocol, aiming to provide a safe and fair distribution of tokens and ETH during an ICO process. The idea behind is the implementation of a faster, easier, more efficient and more secure way for how to raise funds in order to kickstart your blockchain project.
 
