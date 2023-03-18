@@ -32,14 +32,18 @@ npm install
 npx hardhat compile
 </pre>
 ## Configuration
-<p>Before deploying the contract, you need to configure the following parameters in the constructor:</p>
+
+Before deploying the contract, you need to configure the following parameters in the constructor:
+
 - **_tokenInstance**: The ERC20 token instance.
 - **_tokenDecimals**: The number of decimals for the token.
 - **_uniswapv2Router**: The address of the Uniswap V2 router.
 - **_uniswapv2Factory**: The address of the Uniswap V2 factory.
 - **_weth**: The address of the team's wallet.
 - **_burnTokens**: The address of the Wrapped Ether (WETH) token.
-- **_isWhitelist"**: A boolean flag to enable or disable the whitelist feature.
+- **_isWhitelist**: A boolean flag to enable or disable the whitelist feature.
+
+Once the constructor parameters have been set, you can deploy the contract using the Hardhat framework:
 
 Once the constructor parameters have been set, you can deploy the contract using the Hardhat framework:
 
