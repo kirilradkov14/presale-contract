@@ -1,75 +1,87 @@
-# ICO Crowdfunding contract V1
 
-## Goal
-This smart contract is a representation of a completely decentralized crowdfunding protocol, aiming to provide a safe and fair distribution of tokens and ETH during an ICO process. The idea behind is the implementation of a faster, easier, more efficient and more secure way for how to raise funds in order to kickstart your blockchain project.
-
-
-## How it works ?
-#### The fundraiser deploys the contract with the following args:
-- _tokenInstance - the address of the token that's beeing sold
-- _tokenDecimals - the decimals of the same token
-- _uniswapv2Router - UniswapV2 Router
-- _uniswapv2Factory - UniswapV2 Factory
-- _burnToken - burn or refund the unsold tokens option
-- _isWhitelist - Whitelist option
-#### The fundraiser initiates the Pool options:
-- _saleRate - Token amount for paying 1 ETH on ICO.
-- _listingRate - Token amount for paying 1 ETH on Uniswap.
-- _startTime - The starting time of the sale. (Timestamp).
-- _endTime - The ending time of the sale. (Timestamp).
-- _hardCap - The fundraising goal.
-- _softCap - The minimum raised amount of ETH required for ICO to be successful.
-- _maxBuy - Maximum amount that an eligible user can contribute to the ICO.
-- _minBuy - Minimum amount that an eligible user can contribute to the ICO.
-- _liquidityPortion - Percent of the funds raised in this sale that will be used as liquidity on Uniswap. (Must be at least 30).
-####  The fundraiser deposits the tokens to the pool
-#### After the tokens are deposited users can buy by sending ETH to the contract address
-- If the sale requirements are passed, they will receive tokens based on their ETH contribution.
-- If not the EVM will revert the transaction.
-#### If the HC is reached:
-- The fundraiser finishes the sale. By doing this the contract will automatically enable users to claim tokens, provide liquidity to Uniswap, pay the platform fees and withdrawal the funds.
-#### If the SC is reached and sale expires:
-- The fundraiser finishes the sale. By doing this the contract will automatically enable users to claim tokens, provide liquidity to Uniswap, pay the platform fees and withdrawal the funds.
-- The remaining tokens will either be burnt or refunded to the fundraiser (Depending on the chosen option).
-#### If the sale is canceled:
-- The fundraiser withdrawals the deposited tokens to the contract. The user are now eligible to refund their ETH contribution.
-#### If the sale fails to reach SC: 
-- The fundraiser withdrawals the deposited tokens to the contract. The user are now eligible to refund their ETH contribution.
-
-
-## Features
-- Completely decentralized ICO Protocol.
-- Whitelist functionality.
-- Liquidity automatically added upon finalization.
-
- ## Technologies used:
- - Solidity
- - Hardhat
- - EthersJS
- - solhint
-
-## Functions
- `constructor`  - deploys contract with the passed args
-
- `initSale`  - owner choses Pool option
-
- `fallback function`  - allows users to contribute only when the sale is active and requirements are passed
-
- `deposit`  - called by the owner to deposit the required token amount for the presale into the contract.
-
- `cancelSale`  - allows the owner to cancel the sale and start a refund process
-
- `buyTokens`  - used to buy tokens based on the msg value if requirements are passed
-
- `claimTokens`  - called by users for claiming the tokens
-
- `refund`  - called by users for refunding their contribution upon sale failure
-
- `withrawTokens`  - called by owner to withdraw the deposited tokens upon sale failure
-
- `finishSale`  - called by owner when the fundrasing requirements are met, once called - liquidity is provided, users can claim, fees are paid to the platform and owner can withdraw the raised ETH.
-
- `_checkSaleRequirements`  - on call, checks whether the requirements are met or not (presale is active, user is whitelisted, caps are met, sale is initialized and tokens are deposited)
-
-## Tests
-- The uploaded test includes every possible scenario, detailed tests on all functions one by one are not included.
+<h1>Presale Smart Contract</h1>
+<br>
+<p>
+This smart contract is designed for conducting a presale of an ERC20 token. It allows the token's creator to set up a presale with a specific start and end time, hard cap, soft cap, and other parameters. Users can participate in the presale by sending Ether to the contract and claiming their purchased tokens once the presale is over. If the soft cap is not met, participants can request a refund.
+</p>
+br
+<h2>Table of contents</h2>
+<ul>
+    <li>Features</li>
+    <li>Installation</li>
+    <li>Configuration</li>
+    <li>Usage</li>
+    <li>Events</li>
+    <li>Functions</li>
+</ul>
+<br>
+<h2>Features</h2>
+<ul>
+    <li>Customizable presale parameters</li>
+    <li>Whitelisting functionality</li>
+    <li>Automatic liquidity pool creation on Uniswap V2</li>
+    <li>Option to burn or refund unsold tokens</li>
+    <li>Supports cancellation and refunds</li>
+</ul>
+<br>
+<h2>Installation</h2>
+<p>This contract uses the Hardhat framework with JavaScript. To get started, first install the necessary dependencies:</p>
+<pre>
+```bash
+npm install
+```
+</pre>
+<p>Next, compile the contract:</p>
+<pre>
+```bash
+npx hardhat compile
+```
+</pre>
+<br>
+<h2>Configuration</h2>
+<p>Before deploying the contract, you need to configure the following parameters in the constructor:</p>
+<ul>
+    <li>*"_tokenInstance"*: The ERC20 token instance.</li>
+    <li>*"_tokenDecimals"*: The number of decimals for the token.</li>
+    <li>*"_uniswapv2Router"*: The address of the Uniswap V2 router.</li>
+    <li>*"_uniswapv2Factory"*: The address of the Uniswap V2 factory.</li>
+    <li>*"_weth"*: The address of the team's wallet.</li>
+    <li>*"_burnTokens"*: The address of the Wrapped Ether (WETH) token.</li>
+    <li>*"_isWhitelist"*: A boolean flag to enable or disable the whitelist feature.</li>
+</ul>
+<br>
+<p>Once the constructor parameters have been set, you can deploy the contract using the Hardhat framework:</p>
+<pre>
+```bash
+npx hardhat run scripts/deploy.js --network <network_name>
+```
+</pre>
+<p>Replace *"<network_name>"* with the desired network (e.g., *mainnet*, *ropsten*, *rinkeby*, *kovan*, or *localhost*).</p>
+<br>
+<h2>Usage<h2>
+1. Call the initSale() function to set up the presale parameters.
+2. Call the deposit() function to deposit the tokens to be sold during the presale.
+3. Participants can send Ether to the contract during the presale period to purchase tokens.
+4. After the presale is over, call the finishSale() function to finalize the sale and create a Uniswap V2 liquidity pool.
+5. Participants can then call the claimTokens() function to claim their purchased tokens.
+6. If the soft cap is not met, participants can call the refund() function to request a refund.
+<br>
+<h2>Events</h2>
+<ul>
+    <li>*"Liquified"*</li>
+    <li>*"Canceled"*</li>
+    <li>*"Bought"*</li>
+    <li>*"Refunded"*</li>
+    <li>*"Deposited"*</li>
+    <li>*"Claimed"*</li>
+    <li>*"RefundedRemainder"*</li>
+    <li>*"BurntRemainder"*</li>
+    <li>*"Withdraw"*</li>
+</ul>
+<br>
+<h2></h2>
+<ul>
+    <li>*"initSale()"*: Initializes the presale parameters.</li>
+    <li>*"deposit()"*: Deposits tokens into the presale contract.</li>
+    <li>*"finishSale()"*: Finalizes the sale and adds</li>
+</ul>
