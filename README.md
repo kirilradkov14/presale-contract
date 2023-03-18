@@ -23,6 +23,20 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 
 
 ## Installation
+Open a terminal or command prompt on your local machine.
+Change the current directory to the location where you want to clone the repository. 
+For example:
+<pre>
+cd /path/to/your/directory
+</pre>
+Run the following command to clone the repository:
+<pre>
+git clone https://github.com/kirilradkov14/presale-contract.git
+</pre>
+The repository will be cloned into a new folder named presale-contract within your chosen directory. To access the repository, run:
+<pre>
+cd presale-contract
+</pre>
 This contract uses the Hardhat framework with JavaScript. To get started, first install the necessary dependencies:
 <pre>
 npm install
