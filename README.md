@@ -13,7 +13,7 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 - Events
 - Functions
 <br>
-##Features
+## Features
 
 - Customizable presale parameters
 - Whitelisting functionality
@@ -22,7 +22,7 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 - Supports cancellation and refunds
 
 
-##Installation
+## Installation
 <p>This contract uses the Hardhat framework with JavaScript. To get started, first install the necessary dependencies:</p>
 <pre>
 npm install
@@ -48,9 +48,9 @@ Once the constructor parameters have been set, you can deploy the contract using
 npx hardhat run scripts/deploy.js --network <network_name>
 ```
 </pre>
-<p>Replace **<network_name>** with the desired network (e.g., **mainnet**, **ropsten**, **rinkeby**, **kovan**, or **localhost**).</p>
+Replace **<network_name>** with the desired network (e.g., **mainnet**, **ropsten**, **rinkeby**, **kovan**, or **localhost**)
 
-##Usage
+## Usage
 1. Call the **initSale()** function to set up the presale parameters.<br>
 2. Call the **deposit()** function to deposit the tokens to be sold during the presale.<br>
 3. Participants can send Ether to the contract during the presale period to purchase tokens.<br>
@@ -58,7 +58,7 @@ npx hardhat run scripts/deploy.js --network <network_name>
 5. Participants can then call the **claimTokens()** function to claim their purchased tokens.<br>
 6. If the soft cap is not met, participants can call the **refund()** function to request a refund.<br>
 
-##Events
+## Events
 - **Liquified**
 - **Canceled**
 - **Bought**
