@@ -59,12 +59,12 @@ npx hardhat run scripts/deploy.js --network <network_name>
 <p>Replace *"<network_name>"* with the desired network (e.g., *mainnet*, *ropsten*, *rinkeby*, *kovan*, or *localhost*).</p>
 <br>
 <h2>Usage</h2>
-1. Call the initSale() function to set up the presale parameters.
-2. Call the deposit() function to deposit the tokens to be sold during the presale.
-3. Participants can send Ether to the contract during the presale period to purchase tokens.
-4. After the presale is over, call the finishSale() function to finalize the sale and create a Uniswap V2 liquidity pool.
-5. Participants can then call the claimTokens() function to claim their purchased tokens.
-6. If the soft cap is not met, participants can call the refund() function to request a refund.
+1. Call the initSale() function to set up the presale parameters.<br>
+2. Call the deposit() function to deposit the tokens to be sold during the presale.<br>
+3. Participants can send Ether to the contract during the presale period to purchase tokens.<br>
+4. After the presale is over, call the finishSale() function to finalize the sale and create a Uniswap V2 liquidity pool.<br>
+5. Participants can then call the claimTokens() function to claim their purchased tokens.<br>
+6. If the soft cap is not met, participants can call the refund() function to request a refund.<br>
 <br>
 <h2>Events</h2>
 <ul>
