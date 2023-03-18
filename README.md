@@ -2,9 +2,9 @@
 <h1>Presale Smart Contract</h1>
 <br>
 <p>
-This smart contract is designed for conducting a presale of an ERC20 token. It allows the token's creator to set up a presale with a specific start and end time, hard cap, soft cap, and other parameters. Users can participate in the presale by sending Ether to the contract and claiming their purchased tokens once the presale is over. If the soft cap is not met, participants can request a refund.
+Introducing a powerful and versatile smart contract for conducting a presale of an ERC20 token, inspired by the functionality of PinkSale and dxSale platforms. This decentralized crowdfunding protocol aims to provide a safe, fair, and efficient distribution of tokens and ETH during the ICO process. The contract allows the token's creator to set up a presale with customizable parameters such as start and end time, hard cap, soft cap, and more. Users can participate in the presale by sending Ether to the contract and claim their purchased tokens once the presale is over. If the soft cap is not met, participants have the option to request a refund. This innovative solution simplifies the fundraising process for blockchain projects, ensuring a faster, easier, and more secure way to kickstart your project.
 </p>
-br
+<br>
 <h2>Table of contents</h2>
 <ul>
     <li>Features</li>
@@ -58,7 +58,7 @@ npx hardhat run scripts/deploy.js --network <network_name>
 </pre>
 <p>Replace *"<network_name>"* with the desired network (e.g., *mainnet*, *ropsten*, *rinkeby*, *kovan*, or *localhost*).</p>
 <br>
-<h2>Usage<h2>
+<h2>Usage</h2>
 1. Call the initSale() function to set up the presale parameters.
 2. Call the deposit() function to deposit the tokens to be sold during the presale.
 3. Participants can send Ether to the contract during the presale period to purchase tokens.
