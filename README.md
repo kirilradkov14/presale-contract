@@ -31,7 +31,6 @@ npm install
 <pre>
 npx hardhat compile
 </pre>
-<br>
 ## Configuration
 <p>Before deploying the contract, you need to configure the following parameters in the constructor:</p>
 - **_tokenInstance**: The ERC20 token instance.
@@ -51,7 +50,7 @@ npx hardhat run scripts/deploy.js --network <network_name>
 </pre>
 <p>Replace **<network_name>** with the desired network (e.g., **mainnet**, **ropsten**, **rinkeby**, **kovan**, or **localhost**).</p>
 
-## Usage
+##Usage
 1. Call the **initSale()** function to set up the presale parameters.<br>
 2. Call the **deposit()** function to deposit the tokens to be sold during the presale.<br>
 3. Participants can send Ether to the contract during the presale period to purchase tokens.<br>
@@ -59,13 +58,13 @@ npx hardhat run scripts/deploy.js --network <network_name>
 5. Participants can then call the **claimTokens()** function to claim their purchased tokens.<br>
 6. If the soft cap is not met, participants can call the **refund()** function to request a refund.<br>
 
-## Events
+##Events
 - **Liquified**
 - **Canceled**
 - **Bought**
 - **Refunded**
 - **Deposited**
-- **Claimed"**
+- **Claimed**
 - **RefundedRemainder**
 - **BurntRemainder**
 - **Withdraw**
