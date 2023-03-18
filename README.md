@@ -41,7 +41,7 @@ npx hardhat compile
 <h2>Configuration</h2>
 <p>Before deploying the contract, you need to configure the following parameters in the constructor:</p>
 <ul>
-    <li>*"_tokenInstance"*: The ERC20 token instance.</li>
+    <li>*"_tokenInstance"* : The ERC20 token instance.</li>
     <li>*"_tokenDecimals"*: The number of decimals for the token.</li>
     <li>*"_uniswapv2Router"*: The address of the Uniswap V2 router.</li>
     <li>*"_uniswapv2Factory"*: The address of the Uniswap V2 factory.</li>
