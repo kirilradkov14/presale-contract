@@ -1,9 +1,9 @@
 
 # Presale Smart Contract
 
-<p>
+
 Introducing a powerful and versatile smart contract for conducting a presale of an ERC20 token, inspired by the functionality of PinkSale and dxSale platforms. This decentralized crowdfunding protocol aims to provide a safe, fair, and efficient distribution of tokens and ETH during the ICO process. The contract allows the token's creator to set up a presale with customizable parameters such as start and end time, hard cap, soft cap, and more. Users can participate in the presale by sending Ether to the contract and claim their purchased tokens once the presale is over. If the soft cap is not met, participants have the option to request a refund. This innovative solution simplifies the fundraising process for blockchain projects, ensuring a faster, easier, and more secure way to kickstart your project.
-</p>
+
 
 ## Table of contents
 - Features
@@ -12,7 +12,7 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 - Usage
 - Events
 - Functions
-<br>
+
 ## Features
 
 - Customizable presale parameters
@@ -23,7 +23,7 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 
 
 ## Installation
-<p>This contract uses the Hardhat framework with JavaScript. To get started, first install the necessary dependencies:</p>
+This contract uses the Hardhat framework with JavaScript. To get started, first install the necessary dependencies:
 <pre>
 npm install
 </pre>
@@ -31,6 +31,7 @@ npm install
 <pre>
 npx hardhat compile
 </pre>
+
 ## Configuration
 
 Before deploying the contract, you need to configure the following parameters in the constructor:
@@ -43,15 +44,13 @@ Before deploying the contract, you need to configure the following parameters in
 - **_burnTokens**: The address of the Wrapped Ether (WETH) token.
 - **_isWhitelist**: A boolean flag to enable or disable the whitelist feature.
 
-Once the constructor parameters have been set, you can deploy the contract using the Hardhat framework:
 
 Once the constructor parameters have been set, you can deploy the contract using the Hardhat framework:
 
 <pre>
-```bash
 npx hardhat run scripts/deploy.js --network <network_name>
-```
 </pre>
+
 Replace **<network_name>** with the desired network (e.g., **mainnet**, **ropsten**, **rinkeby**, **kovan**, or **localhost**)
 
 ## Usage
