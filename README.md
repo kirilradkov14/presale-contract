@@ -17,8 +17,8 @@ Introducing a powerful and versatile smart contract for conducting a presale of 
 
 - Customizable presale parameters
 - Whitelisting functionality
-- Automatic liquidity pool creation on Uniswap V2
-- Option to burn or refund unsold tokens<
+- Automatic pair creation and liquification on Uniswap V2
+- Option to burn or refund unsold tokens
 - Supports cancellation and refunds
 
 
@@ -54,8 +54,8 @@ Before deploying the contract, you need to configure the following parameters in
 - **_tokenDecimals**: The number of decimals for the token.
 - **_uniswapv2Router**: The address of the Uniswap V2 router.
 - **_uniswapv2Factory**: The address of the Uniswap V2 factory.
-- **_weth**: The address of the team's wallet.
-- **_burnTokens**: The address of the Wrapped Ether (WETH) token.
+- **_weth**: The address of the Wrapped Ether (WETH) token.
+- **_burnTokens**:  A boolean flag to enable or disable the burn feature.
 - **_isWhitelist**: A boolean flag to enable or disable the whitelist feature.
 
 
