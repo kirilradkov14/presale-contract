@@ -1,11 +1,12 @@
 {
   "name": "hardhat-project",
   "devDependencies": {
-    "hardhat": "^2.9.9"
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-solhint": "^3.0.1",
+    "hardhat": "^2.14.0",
+    "hardhat-solhint": "^1.0.1"
   },
   "dependencies": {
-    "@nomiclabs/hardhat-waffle": "^2.0.3",
-    "dotenv": "^16.0.1",
-    "env": "^0.0.2"
+    "dotenv": "^16.0.3"
   }
 }

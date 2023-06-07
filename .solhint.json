@@ -1,8 +1,8 @@
 {
-  "extends": "solhint:recommended",
-  "plugins": [],
+  "extends": "solhint:default",
   "rules": {
     "avoid-suicide": "error",
-    "avoid-sha3": "warn"
+    "avoid-sha3": "warn",
+    "max-len": ["off"]
   }
 }

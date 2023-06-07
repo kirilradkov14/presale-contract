@@ -1,4 +1,4 @@
-require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-solhint");
 require("dotenv").config();
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -10,7 +10,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 });
 
 module.exports = {
-  solidity: "0.8.4",
+  solidity: "0.8.19",
   networks: {
     goerli: {
       chainId: 5,

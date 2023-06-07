@@ -1,0 +1,11 @@
+{
+    "solidity.defaultCompiler": "remote",
+    "solidity.compileUsingRemoteVersion": "v0.8.19+commit.7dd6d404",
+    "solidity.compileUsingLocalVersion": "d:\\Docs\\Projects\\presale-contract\\soljson-v0.8.19+commit.7dd6d404.js",
+    "solidity-va.hover": true,
+    "solidity-va.deco.statevars": true,
+    "solidity-va.deco.arguments": true,
+    "solidity-va.deco.warn.externalCalls": true,
+    "solidity-va.deco.warn.reserved": true,
+    "solidity-va.mode.active": true
+}
