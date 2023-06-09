@@ -1,25 +1,36 @@
-require("@nomiclabs/hardhat-solhint");
+require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
-  const accounts = await hre.ethers.getSigners();
-
-  for (const account of accounts) {
-      console.log(account.address);
-  }
-});
+const getAccounts = [
+  process.env.PK_ACCOUNT1,
+  process.env.PK_ACCOUNT2,
+  process.env.PK_ACCOUNT3,
+  process.env.PK_ACCOUNT4,
+  process.env.PK_ACCOUNT5,
+  process.env.PK_ACCOUNT6
+]
 
 module.exports = {
   solidity: "0.8.19",
   networks: {
     goerli: {
-      chainId: 5,
-      url: process.env.GOERLI_NODE,
-      accounts: [process.env.PRIVATE_KEY_CREATOR, process.env.PRIVATE_KEY_USER_1, process.env.PRIVATE_KEY_USER_2, process.env.PRIVATE_KEY_USER_3],
+      url: process.env.ALCHEMY_GOERLI_HTTP,
+      accounts: getAccounts
+    },
+    sepolia: {
+      url: process.env.ALCHEMY_SEPOLIA_HTTP,
+      accounts: getAccounts
+    },
+    bsct: {
+      url:process.env.BINANCE_TESTNET,
+      accounts: getAccounts
+    },
+    bscm: {
+      url:process.env.BINANCE_MAINNET,
+      accounts: getAccounts
     }
   },
-
-  mocha: {
-    timeout: 100000000
-  }
-};
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
+}

@@ -4,8 +4,10 @@ pragma solidity ^0.8.19;
 
 import "./access/Ownable.sol";
 import "./proxy/Clones.sol";
+import "./utils/Address.sol";
 
-contract PresaleFactory is Ownable {
+abstract contract PresaleFactory is Ownable {
+    using Address for address payable;
     address [] public presales;
     address private implementation;
     address private admin;
@@ -38,6 +40,9 @@ contract PresaleFactory is Ownable {
         address _admin,
         uint8 _fee
     ){
+        require(_implementation != address(0), "Implementation cant be 0");
+        require(_admin != address(0), "Admin cant be 0");
+
         implementation = _implementation;
         admin = _admin;
         fee = _fee;
@@ -52,7 +57,7 @@ contract PresaleFactory is Ownable {
         fee = _newFee;
     }
 
-    function updatefeeTaker(address _newAdmin) external onlyOwner {
+    function updateAdmin(address _newAdmin) external onlyOwner {
         require(_newAdmin != admin, "New feeTaker must be different from feeTaker");
         require(_newAdmin <= address(0), "New feeTaker cant be 0 address");
 
@@ -60,22 +65,28 @@ contract PresaleFactory is Ownable {
 
         admin = _newAdmin;
     }
-
+	
     function createPresale(Arguments calldata args) payable external returns (address presale) {
         require(msg.sender == tx.origin, "Caller is a smart contract");
+        require(msg.value == fee, "Invalid fee amount");
+
         bytes32 salt = keccak256(abi.encodePacked(block.timestamp, msg.sender));
         presale = Clones.cloneDeterministic(implementation, salt);
         
-        (bool success, ) = presale.call{value: msg.value}
-        (abi.encodeWithSignature(
+        //solhint-disable max-line-length
+        (bool success, ) = presale.call{value: msg.value}(abi.encodeWithSignature(
             "initialize((address,address,address,bool,uint8,uint64,uint64,uint256,uint256,uint256,uint256,uint256,uint256))",
             args
         ));
-        
+
         require(success, "Initialization failed.");
+
         presales.push(presale);
+
         emit PresaleCreated(presale, msg.sender);
+
         return presale;
     }
+
 
 }

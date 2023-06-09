@@ -6,14 +6,15 @@ import "./proxy/Initializable.sol";
 import "./utils/Address.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IUniswapV2Factory.sol";
-import "./interfaces/IUniswapv2Router02.sol";
+import "./interfaces/IUniswapV2Router02.sol";
 import "./interfaces/IERC20Metadata.sol";
 
 contract Presale is Initializable {
     using Address for address payable;
 
-    address constant WETH = "0x000000000000000000000000000000000000dEaD";
-    address constant DEAD = "0x000000000000000000000000000000000000dEaD";
+    // WETH and DEAD values wont be changed
+    address constant WETH = 0xD0dF82dE051244f04BfF3A8bB1f62E1cD39eED92; //AAVE USDT SEPOLIA 
+    address constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
     struct Pool {
         bool burnUnsold;
@@ -114,7 +115,7 @@ contract Presale is Initializable {
         require(args.startTime >= block.timestamp, "Invalid start time.");
         require(args.endTime > block.timestamp, "Invalid end time.");
         require(args.softCap >= args.hardCap / 2, "SC must be >= HC/2.");
-        require(args.liquidityPortion >= 30, "Liquidity must be >=30.");
+        require(args.liquidityPortion >= 50, "Liquidity must be > 50.");
         require(args.liquidityPortion <= 100, "Invalid liquidity.");
         require(args.minBuy < args.maxBuy, "Min buy must greater than max.");
         require(args.minBuy > 0, "Min buy must exceed 0.");
@@ -123,9 +124,9 @@ contract Presale is Initializable {
 
         token = IERC20(args.tokenAddress);
 
-        pool memory newPool = Pool(
+        Pool memory newPool = Pool(
             args.burnUnsold,
-            IERC20Metapool(address(token)).decimals(),
+            IERC20Metadata(address(token)).decimals(),
             msg.sender,
             0,
             0,
@@ -155,7 +156,7 @@ contract Presale is Initializable {
         pool.status = 2;
 
         uint256 tokensForSale = pool.hardCap * (pool.saleRate) / (10**18) / (10**(18 - pool.tokenDecimals));
-        presaleTokens = tokensForSale;
+        pool.presaleTokens = tokensForSale;
         uint256 totalDeposit = _getTokenDeposit();
 
         require(token.transferFrom(msg.sender, address(this), totalDeposit), "Deposit failed.");
@@ -166,7 +167,7 @@ contract Presale is Initializable {
     * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn/refund unused tokens
     */
     function finishSale() external onlyCreator onlyInactive{
-        require(status < 3, "Unable to finalize");
+        require(pool.status < 3, "Unable to finalize");
         require(pool.ethRaised >= pool.softCap, "Soft Cap is not met.");
         require(block.timestamp > pool.startTime, "Can not finish before start");
         pool.status = 4;
@@ -181,7 +182,7 @@ contract Presale is Initializable {
             tokensForLiquidity, 
             tokensForLiquidity, 
             _getLiquidityEth(), 
-            creator, 
+            pool.creator, 
             block.timestamp + 600
             );
         require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Failed to liquify");
@@ -196,20 +197,20 @@ contract Presale is Initializable {
         //withrawal eth
         uint256 ownerShareEth = _getOwnerEth();
         if (ownerShareEth > 0) {
-            payable(creator).sendValue(ownerShareEth);
+            payable(pool.creator).sendValue(ownerShareEth);
         }
 
         //If HC is not reached, burn or refund the remainder
         if (pool.ethRaised < pool.hardCap) {
             uint256 remainder = _getTokenDeposit() - (tokensForSale + tokensForLiquidity);
-            if(burnTokens == true){
+            if(pool.burnUnsold == true){
                 require(token.transfer(
                     DEAD, 
                     remainder), "Burn failed"
                     );
                 emit BurntRemainder(msg.sender, remainder);
             } else {
-                require(token.transfer(creator, remainder), "Refund failed");
+                require(token.transfer(pool.creator, remainder), "Refund failed");
                 emit RefundedRemainder(msg.sender, remainder);
             }
         }
@@ -266,7 +267,7 @@ contract Presale is Initializable {
         pool.ethRaised += weiAmount;
         pool.presaleTokens -= tokensAmount;
         ethContribution[msg.sender] += weiAmount;
-        emit Bought(_msgSender(), tokensAmount);
+        emit Bought(msg.sender, tokensAmount);
     }
 
     /*
@@ -285,12 +286,12 @@ contract Presale is Initializable {
     * Internal functions, called when calculating balances
     */
     function _getUserTokens(uint256 _amount) internal view returns (uint256){
-        return _amount * (pool.saleRate) / (10 ** 18) / (10**(18-tokenDecimals));
+        return _amount * (pool.saleRate) / (10 ** 18) / (10**(18-pool.tokenDecimals));
     }
 
     function _getLiquidityTokensDeposit() internal view returns (uint256) {
         uint256 value = pool.hardCap * pool.listingRate * pool.liquidityPortion / 100;
-        return value / (10**18) / (10**(18-tokenDecimals));
+        return value / (10**18) / (10**(18-pool.tokenDecimals));
     }
 
     function _getLiquidityEth() internal view returns (uint256) {
@@ -303,7 +304,7 @@ contract Presale is Initializable {
     }
     
     function _getTokenDeposit() internal view returns (uint256){
-        uint256 tokensForSale = pool.hardCap * pool.saleRate / (10**18) / (10**(18-tokenDecimals));
+        uint256 tokensForSale = pool.hardCap * pool.saleRate / (10**18) / (10**(18-pool.tokenDecimals));
         uint256 tokensForLiquidity = _getLiquidityTokensDeposit();
         return(tokensForSale + tokensForLiquidity);
     }
