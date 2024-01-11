@@ -1,25 +1,80 @@
-require("@nomiclabs/hardhat-waffle");
+import "@nomicfoundation/hardhat-toolbox";
+import { ethers } from "hardhat";
+
 require("dotenv").config();
 
-task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
-  const accounts = await hre.ethers.getSigners();
-
-  for (const account of accounts) {
-      console.log(account.address);
-  }
-});
+const Accounts = await ethers.getSigners();
 
 module.exports = {
-  solidity: "0.8.4",
+  solidity: {
+    compilers: [
+      {
+
+        version: "0.8.20",
+        settings: {
+          enabled: true,
+          runs: 1_000_000,
+        },
+        viaIR: true,
+
+        version: "0.8.23",
+        settings: {
+          enabled: true,
+          runs: 1_000_000,
+        },
+        viaIR: true,
+      },
+
+    ]
+
+  },
+
   networks: {
+
+    hardhat: {
+      gas: "auto",       // Automatically estimate the gas
+      blockGasLimit: 0x1fffffffffffff,
+      allowUnlimitedContractSize: true
+    },
+
+    eth_mainnet:{
+      url: process.env.ETH_MAINNET_HTTPS,
+      accounts: Accounts
+    },
+
     goerli: {
-      chainId: 5,
-      url: process.env.GOERLI_NODE,
-      accounts: [process.env.PRIVATE_KEY_CREATOR, process.env.PRIVATE_KEY_USER_1, process.env.PRIVATE_KEY_USER_2, process.env.PRIVATE_KEY_USER_3],
+      url: process.env.ETH_GOERLI_HTTPS,
+      accounts: Accounts
+    },
+
+    sepolia: {
+      url: process.env.ETH_SEPOLIA_HTTPS,
+      accounts: Accounts
+    },
+
+    bnb_testnet: {
+      url: process.env.BNB_TESTNET_HTTPS,
+      accounts: Accounts
+    },
+
+    bnb_mainnet: {
+      url: process.env.BNB_MAINNET_HTTPS,
+      accounts: Accounts
+    },
+
+    goerli_arb: {
+      url: process.env.ARB_GOERLI_HTTPS,
+      accounts: Accounts
     }
   },
 
-  mocha: {
-    timeout: 100000000
-  }
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+  },
+
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
+  },
+  
 };
