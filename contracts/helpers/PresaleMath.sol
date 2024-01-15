@@ -54,4 +54,19 @@ library PresaleMath {
         uint256 tokensForLiquidity = weiRaised * listingRate * liquidityPortion / 100;
         return tokensForLiquidity / (10 ** (36 - tokenDecimals));
     }
+
+    function remainder(
+        uint256 hardCap,
+        uint256 raised,
+        uint256 saleRate,
+        uint256 listingRate,
+        uint256 liquidityPortion,
+        uint8 tokenDecimals
+    ) internal pure returns (uint256) {
+        uint256 forDeposit = tokenDeposit(hardCap, saleRate, listingRate, liquidityPortion, tokenDecimals);
+        uint256 forSale = userTokens(hardCap, saleRate, tokenDecimals);
+        uint256 forLiquidity = liquidityTokens(raised, listingRate, liquidityPortion, tokenDecimals);
+
+        return forDeposit - (forSale + forLiquidity);
+    }
 }

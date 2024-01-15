@@ -14,10 +14,11 @@ contract Presale is Ownable(msg.sender) {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
+    address immutable DEAD = 0x000000000000000000000000000000000000dEaD;
+
     struct Data {
         uint256 presaleTokens;
         uint256 raised;
-        address wallet;
         address weth;
         IERC20 token;
         IUniswapV2Factory UniswapV2Factory;
@@ -64,6 +65,7 @@ contract Presale is Ownable(msg.sender) {
     event TokenClaim(address indexed beneficiary, uint256 amount);
     event Withdraw(address indexed beneficiary, uint256 amount);
     event Cancel(address indexed beneficiary, uint256 amount);
+    event Finalized(address indexed creator, uint256 amount, uint256 time);
 
     mapping(address => uint256) public weiContribution;
 
@@ -71,7 +73,6 @@ contract Presale is Ownable(msg.sender) {
     Pool public pool;
 
     constructor (
-        address _wallet,
         address _weth,
         address _token,
         address _uniswapv2Router, 
@@ -82,7 +83,6 @@ contract Presale is Ownable(msg.sender) {
     )  {
 
         Pool memory newPool = _pool;
-        data.wallet = _wallet;
         data.weth = _weth;
         data.token = IERC20(_token);
         data.UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
@@ -117,35 +117,40 @@ contract Presale is Ownable(msg.sender) {
         if(data.raised >= pool.softCap) revert FinalizationError();
 
         data.status = 3;
+
         _liquify();
 
-    }
+        // Withdraw the ETH
+        uint256 withdrawable = PresaleMath.withdrawableETH(data.raised, pool.liquidity);
+        if (withdrawable > 0) {
+            payable(msg.sender).sendValue(withdrawable);
+        }
 
-    function _liquify() internal {
-        uint256 tokensForLiquidity = PresaleMath.liquidityTokens(
-            data.raised, 
-            pool.listingRate, 
-            pool.liquidity, 
-            data.decimals
-        );
-        uint256 liquidityEth = PresaleMath.liquidityETH(data.raised, pool.liquidity);
+        // When hc not reach we either burn or refund the remaining tokens
+        if(data.raised < pool.hardCap ) {
+            uint256 remainder = PresaleMath.remainder(
+                pool.hardCap, 
+                data.raised, 
+                pool.saleRate, 
+                pool.listingRate, 
+                pool.liquidity, 
+                data.decimals
+            );
+            address target = data.refundOptions != 0 ? msg.sender : DEAD;
 
-        (uint amountToken, uint amountETH, ) = data.UniswapV2Router02.addLiquidityETH{value : liquidityEth}(
-            address(data.token),
-            tokensForLiquidity, 
-            tokensForLiquidity, 
-            liquidityEth, 
-            owner(), 
-            block.timestamp + 600
-        );
+            if(!data.token.transfer(target, remainder)) {
+                revert FinalizationError();
+            }
+        }
 
-        if(amountToken != tokensForLiquidity && amountETH != liquidityEth) revert FinalizationError();
+        emit Finalized(msg.sender, data.raised, block.timestamp);
     }
 
     function cancel() external onlyOwner {
         if(data.status > 2) revert CancelationError();
 
         data.status = 2;
+
         if (data.token.balanceOf(address(this)) > 0) {
             uint256 amount = PresaleMath.tokenDeposit(
                 pool.hardCap,
@@ -156,6 +161,7 @@ contract Presale is Ownable(msg.sender) {
             );
 
             if(!data.token.transfer(msg.sender, amount)) revert WithdrawalError();
+
             emit Cancel(msg.sender, amount);
         }
     }
@@ -199,6 +205,27 @@ contract Presale is Ownable(msg.sender) {
             PresaleMath.userTokens(amount, pool.saleRate, data.decimals), 
             amount
         );
+    }
+
+    function _liquify() internal {
+        uint256 tokensForLiquidity = PresaleMath.liquidityTokens(
+            data.raised, 
+            pool.listingRate, 
+            pool.liquidity, 
+            data.decimals
+        );
+        uint256 liquidityEth = PresaleMath.liquidityETH(data.raised, pool.liquidity);
+
+        (uint amountToken, uint amountETH, ) = data.UniswapV2Router02.addLiquidityETH{value : liquidityEth}(
+            address(data.token),
+            tokensForLiquidity, 
+            tokensForLiquidity, 
+            liquidityEth, 
+            owner(), 
+            block.timestamp + 600
+        );
+
+        if(amountToken != tokensForLiquidity && amountETH != liquidityEth) revert FinalizationError();
     }
 
     function _prevalidatePurchase(
