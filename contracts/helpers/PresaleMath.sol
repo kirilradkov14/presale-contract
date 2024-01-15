@@ -25,22 +25,33 @@ library PresaleMath {
     function tokenDeposit(
         uint256 hardCap, 
         uint256 saleRate,
-        uint256 liquidityRate,
+        uint256 listingRate,
         uint256 liquidityPortion, 
         uint8 tokenDecimals
     ) internal pure returns (uint256) {
         uint256 forSale = userTokens(hardCap, saleRate, tokenDecimals);
-        uint256 forLiquidity = depositLiquidityTokens(hardCap, liquidityRate, liquidityPortion, tokenDecimals);
+        uint256 forLiquidity = depositLiquidityTokens(hardCap, listingRate, liquidityPortion, tokenDecimals);
         return forSale + forLiquidity;
     }
 
     // Calculates the tokens for depositing into liquidity
     function depositLiquidityTokens(
         uint256 hardCap, 
-        uint256 liquidityRate, 
+        uint256 listingRate, 
         uint256 liquidityPortion, 
         uint8 tokenDecimals
     ) internal pure returns (uint256) {
-        return userTokens(hardCap, liquidityRate * liquidityPortion / 100, tokenDecimals);
+        return userTokens(hardCap, listingRate * liquidityPortion / 100, tokenDecimals);
+    }
+
+
+    function liquidityTokens(
+        uint256 weiRaised, 
+        uint256 listingRate, 
+        uint256 liquidityPortion, 
+        uint8 tokenDecimals
+    ) internal pure returns (uint256) {
+        uint256 tokensForLiquidity = weiRaised * listingRate * liquidityPortion / 100;
+        return tokensForLiquidity / (10 ** (36 - tokenDecimals));
     }
 }
