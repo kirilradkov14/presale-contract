@@ -23,7 +23,6 @@ contract Presale is Ownable(msg.sender) {
         IERC20 token;
         IUniswapV2Factory UniswapV2Factory;
         IUniswapV2Router02 UniswapV2Router02;
-        uint8 decimals;
         uint8 status;
         uint8 refundOptions;
     }
@@ -40,8 +39,7 @@ contract Presale is Ownable(msg.sender) {
         uint8 liquidity;
     }
 
-    error PurchaseError(string reason);
-    error TimeError();
+    error Validation();
     error DepositError();
     error FinalizationError();
     error CancelationError();
@@ -51,8 +49,8 @@ contract Presale is Ownable(msg.sender) {
     error Forbidden();
 
     modifier finalizable(){
-        if(data.raised < pool.softCap) revert FinalizationError();
-        if(pool.hardCap < data.raised && block.timestamp > pool.end) revert FinalizationError();
+        if(data.raised < pool.softCap) revert Forbidden();
+        if(pool.hardCap < data.raised && block.timestamp > pool.end) revert Forbidden();
         _;
     }
 
@@ -82,18 +80,19 @@ contract Presale is Ownable(msg.sender) {
         address _token,
         address _uniswapv2Router, 
         address _uniswapv2Factory,
-        uint8 _decimals,
         uint8 _refundOptions,
         Pool memory _pool
     )  {
-
-        _prevalidatePool();
+        if(_weth == address(0)) revert Validation();
+        if(_token == address(0)) revert Validation();
+        if(_uniswapv2Router == address(0)) revert Validation();
+        if(_uniswapv2Factory == address(0)) revert Validation();
+        _prevalidatePool(_pool);
 
         data.weth = _weth;
         data.token = IERC20(_token);
         data.UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
         data.UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
-        data.decimals = _decimals;
         data.refundOptions = _refundOptions;
         pool = _pool;
 
@@ -231,17 +230,25 @@ contract Presale is Ownable(msg.sender) {
         address _beneficiary, 
         uint256 _amount
     ) internal view returns(bool) {
-        if(data.raised + _amount >= pool.hardCap) revert PurchaseError("Hard capped");
-        if(block.timestamp < pool.start) revert PurchaseError("");
-        if(block.timestamp > pool.end) revert PurchaseError("");
-        if(_amount == 0) revert PurchaseError("Amount is 0");
-        if(_amount < pool.min) revert PurchaseError("Purchase below min");
-        if(_amount + weiContribution[_beneficiary] > pool.max) revert PurchaseError("Buy limit exceeded");
+        if(data.raised + _amount >= pool.hardCap) revert Validation();
+        if(block.timestamp < pool.start) revert Validation();
+        if(block.timestamp > pool.end) revert Validation();
+        if(_amount == 0) revert Validation();
+        if(_amount < pool.min) revert Validation();
+        if(_amount + weiContribution[_beneficiary] > pool.max) revert Validation();
         return true;
     }
 
-    // @dev
-    function _prevalidatePool() internal view returns(bool) {
-        
+    function _prevalidatePool(Pool memory _pool) internal view returns(bool) {
+        if (_pool.softCap == 0) revert Validation();
+        if (_pool.softCap < _pool.hardCap / 2) revert Validation();
+        if (_pool.saleRate == 0) revert Validation();
+        if (_pool.listingRate == 0) revert Validation();
+        if (_pool.min == 0) revert Validation();
+        if (_pool.min > _pool.max) revert Validation();
+        if (_pool.liquidity < 50 || _pool.liquidity > 100) revert Validation();
+        if (_pool.start > block.timestamp) revert Validation();
+        if (_pool.start > _pool.end) revert Validation();
+        return true;
     }
 }
