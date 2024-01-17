@@ -114,8 +114,8 @@ contract Presale is Ownable(msg.sender) {
         );
 
         data.status = 1;
-        
-        if(!data.token.transferFrom(msg.sender, address(this), amount)) revert DepositError();
+
+        data.token.safeTransferFrom(msg.sender, address(this), amount);
 
         emit Deposit(msg.sender, amount);
 
@@ -145,9 +145,7 @@ contract Presale is Ownable(msg.sender) {
             );
             address target = data.refundOptions != 0 ? msg.sender : DEAD;
 
-            if(!data.token.transfer(target, remainder)) {
-                revert FinalizationError();
-            }
+            data.token.safeTransfer(target, remainder);
         }
 
         emit Finalized(msg.sender, data.raised, block.timestamp);
@@ -163,14 +161,15 @@ contract Presale is Ownable(msg.sender) {
         if (data.token.balanceOf(address(this)) > 0) {
             uint256 amount = data.presaleTokens;
             data.presaleTokens = 0;
-            if(!data.token.transfer(msg.sender, amount)) revert WithdrawalError();
+            data.token.safeTransfer(msg.sender, amount);
         }
 
         emit Cancel(msg.sender, block.timestamp);
+
         return true;
     }
     
-    function claim() external {
+    function claim() external returns (uint256) {
         if(data.status != 3) revert ClaimError();
 
         uint256 amount = PresaleMath.userTokens(
@@ -180,11 +179,14 @@ contract Presale is Ownable(msg.sender) {
 
         weiContribution[msg.sender] = 0;
 
-        if(!data.token.transfer(msg.sender, amount)) revert ClaimError();
+        data.token.safeTransfer(msg.sender, amount);
+        
         emit TokenClaim(msg.sender, amount);
+
+        return amount;
     }
 
-    function refund() external {
+    function refund() external returns (uint256) {
         if (data.status == 2) revert RefundError();
 
         uint256 amount = weiContribution[msg.sender];
@@ -195,6 +197,8 @@ contract Presale is Ownable(msg.sender) {
             payable(msg.sender).sendValue(amount);
             emit Refund(msg.sender, amount);
         }
+
+        return amount;
     }
 
     function _purchase(address beneficiary, uint256 amount) private {
@@ -226,10 +230,7 @@ contract Presale is Ownable(msg.sender) {
         if(amountToken != _tokensForLiquidity && amountETH != _liquidityWei) revert FinalizationError();
     }
 
-    function _prevalidatePurchase(
-        address _beneficiary, 
-        uint256 _amount
-    ) internal view returns(bool) {
+    function _prevalidatePurchase(address _beneficiary, uint256 _amount) internal view returns(bool) {
         if(data.raised + _amount >= pool.hardCap) revert Validation();
         if(block.timestamp < pool.start) revert Validation();
         if(block.timestamp > pool.end) revert Validation();
