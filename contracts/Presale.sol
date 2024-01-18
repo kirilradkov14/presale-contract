@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { IUniswapV2Factory } from "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
@@ -38,19 +38,14 @@ contract Presale is Ownable(msg.sender) {
         uint96 end;
         uint8 liquidity;
     }
-
-    error Validation();
-    error DepositError();
-    error FinalizationError();
-    error CancelationError();
-    error ClaimError();
-    error WithdrawalError();
-    error RefundError();
-    error Forbidden();
+    
+    error Validation(string reason);
+    error Forbidden(string reason);
+    error Insufficient(string reason);
 
     modifier finalizable(){
-        if(data.raised < pool.softCap) revert Forbidden();
-        if(pool.hardCap < data.raised && block.timestamp > pool.end) revert Forbidden();
+        if(data.raised < pool.softCap) revert Forbidden("");
+        if(pool.hardCap < data.raised && block.timestamp > pool.end) revert Forbidden("");
         _;
     }
 
@@ -59,42 +54,56 @@ contract Presale is Ownable(msg.sender) {
         uint256 contribution, 
         uint256 amount
     );
+
     event Finalized(
         address indexed creator, 
         uint256 amount, 
         uint256 timestamp
     );
-    event Refund(address indexed beneficiary, uint256 amount);
-    event Deposit(address indexed creator, uint256 amount);
-    event TokenClaim(address indexed beneficiary, uint256 amount);
-    event Withdraw(address indexed beneficiary, uint256 amount);
+
+    event Refund(
+        address indexed beneficiary, 
+        uint256 amount, 
+        uint256 timestamp
+    );
+
+    event Deposit(
+        address indexed creator,
+        uint256 amount, 
+        uint256 timestamp
+    );
+
+    event TokenClaim(
+        address indexed beneficiary, 
+        uint256 amount, 
+        uint256 timestamp
+    );
+
+    event Withdraw(
+        address indexed beneficiary, 
+        uint256 amount, 
+        uint256 timestamp
+    );
+
     event Cancel(address indexed creator, uint256 timestamp);
 
     mapping(address => uint256) public weiContribution;
 
     Data public data;
     Pool public pool;
-
+    
     constructor (
         address _weth,
-        address _token,
         address _uniswapv2Router, 
-        address _uniswapv2Factory,
-        uint8 _refundOptions,
-        Pool memory _pool
+        address _uniswapv2Factory
     )  {
-        if(_weth == address(0)) revert Validation();
-        if(_token == address(0)) revert Validation();
-        if(_uniswapv2Router == address(0)) revert Validation();
-        if(_uniswapv2Factory == address(0)) revert Validation();
-        _prevalidatePool(_pool);
+        if(_weth == address(0)) revert Validation("");
+        if(_uniswapv2Router == address(0)) revert Validation("");
+        if(_uniswapv2Factory == address(0)) revert Validation("");
 
         data.weth = _weth;
-        data.token = IERC20(_token);
         data.UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
         data.UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
-        data.refundOptions = _refundOptions;
-        pool = _pool;
 
         // @dev would return the pair
         // data.UniswapV2Factory.getPair(address(data.token), data.weth);
@@ -104,8 +113,26 @@ contract Presale is Ownable(msg.sender) {
         _purchase(msg.sender, msg.value);
     }
 
+    function createPresale(
+        address _token,
+        uint8 _refundOptions,
+        Pool memory _pool
+    ) external onlyOwner returns (address) {
+        if(data.status != 0) revert Forbidden("");
+        if(_token == address(0)) revert Validation("");
+
+        _prevalidatePool(_pool);
+
+        data.status = 1;
+        data.token = IERC20(_token);
+        data.refundOptions = _refundOptions;
+        pool = _pool;
+
+        return address(this);
+    }
+
     function deposit() external onlyOwner returns (uint256) {
-        if(data.status != 0) revert DepositError();
+        if(data.status != 1) revert Forbidden("");
 
         uint256 amount = PresaleMath.totalTokens(
             pool.hardCap,
@@ -113,19 +140,23 @@ contract Presale is Ownable(msg.sender) {
             pool.listingRate
         );
 
-        data.status = 1;
+        data.status = 2;
 
         data.token.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit Deposit(msg.sender, amount);
+        emit Deposit(
+            msg.sender,
+            amount,
+            block.timestamp
+        );
 
         return amount;
     }
 
     function finalize() external onlyOwner finalizable returns(bool) {
-        if(data.status != 1) revert FinalizationError();
+        if(data.status != 2) revert Forbidden("");
 
-        data.status = 3;
+        data.status = 4;
 
         _liquify();
 
@@ -148,15 +179,19 @@ contract Presale is Ownable(msg.sender) {
             data.token.safeTransfer(target, remainder);
         }
 
-        emit Finalized(msg.sender, data.raised, block.timestamp);
+        emit Finalized(
+            msg.sender, 
+            data.raised, 
+            block.timestamp
+        );
         
         return true;
     }
 
     function cancel() external onlyOwner returns(bool){
-        if(data.status > 2) revert CancelationError();
+        if(data.status > 3) revert Forbidden("");
 
-        data.status = 2;
+        data.status = 3;
 
         if (data.token.balanceOf(address(this)) > 0) {
             uint256 amount = data.presaleTokens;
@@ -170,7 +205,7 @@ contract Presale is Ownable(msg.sender) {
     }
     
     function claim() external returns (uint256) {
-        if(data.status != 3) revert ClaimError();
+        if(data.status != 4) revert Forbidden("");
 
         uint256 amount = PresaleMath.userTokens(
             weiContribution[msg.sender],
@@ -181,21 +216,29 @@ contract Presale is Ownable(msg.sender) {
 
         data.token.safeTransfer(msg.sender, amount);
         
-        emit TokenClaim(msg.sender, amount);
+        emit TokenClaim(
+            msg.sender, 
+            amount, 
+            block.timestamp
+        );
 
         return amount;
     }
 
     function refund() external returns (uint256) {
-        if (data.status == 2) revert RefundError();
+        if (data.status == 3) revert Forbidden("");
 
         uint256 amount = weiContribution[msg.sender];
-        if(amount == 0) revert ClaimError();
+        if(amount == 0) revert Insufficient("");
 
         if(address(this).balance >= amount) {
             weiContribution[msg.sender] = 0;
             payable(msg.sender).sendValue(amount);
-            emit Refund(msg.sender, amount);
+            emit Refund(
+                msg.sender, 
+                amount, 
+                block.timestamp
+            );
         }
 
         return amount;
@@ -227,29 +270,29 @@ contract Presale is Ownable(msg.sender) {
             block.timestamp + 600
         );
 
-        if(amountToken != _tokensForLiquidity && amountETH != _liquidityWei) revert FinalizationError();
+        if(amountToken != _tokensForLiquidity && amountETH != _liquidityWei) revert Insufficient("");
     }
 
     function _prevalidatePurchase(address _beneficiary, uint256 _amount) internal view returns(bool) {
-        if(data.raised + _amount >= pool.hardCap) revert Validation();
-        if(block.timestamp < pool.start) revert Validation();
-        if(block.timestamp > pool.end) revert Validation();
-        if(_amount == 0) revert Validation();
-        if(_amount < pool.min) revert Validation();
-        if(_amount + weiContribution[_beneficiary] > pool.max) revert Validation();
+        if(data.raised + _amount >= pool.hardCap) revert Validation("");
+        if(block.timestamp < pool.start) revert Validation("");
+        if(block.timestamp > pool.end) revert Validation("");
+        if(_amount == 0) revert Validation("");
+        if(_amount < pool.min) revert Validation("");
+        if(_amount + weiContribution[_beneficiary] > pool.max) revert Validation("");
         return true;
     }
 
     function _prevalidatePool(Pool memory _pool) internal view returns(bool) {
-        if (_pool.softCap == 0) revert Validation();
-        if (_pool.softCap < _pool.hardCap / 2) revert Validation();
-        if (_pool.saleRate == 0) revert Validation();
-        if (_pool.listingRate == 0) revert Validation();
-        if (_pool.min == 0) revert Validation();
-        if (_pool.min > _pool.max) revert Validation();
-        if (_pool.liquidity < 50 || _pool.liquidity > 100) revert Validation();
-        if (_pool.start > block.timestamp) revert Validation();
-        if (_pool.start > _pool.end) revert Validation();
+        if (_pool.softCap == 0) revert Validation("");
+        if (_pool.softCap < _pool.hardCap / 2) revert Validation("");
+        if (_pool.saleRate == 0) revert Validation("");
+        if (_pool.listingRate == 0) revert Validation("");
+        if (_pool.min == 0) revert Validation("");
+        if (_pool.min > _pool.max) revert Validation("");
+        if (_pool.liquidity < 50 || _pool.liquidity > 100) revert Validation("");
+        if (_pool.start > block.timestamp) revert Validation("");
+        if (_pool.start > _pool.end) revert Validation("");
         return true;
     }
 }
