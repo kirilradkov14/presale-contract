@@ -20,14 +20,13 @@ contract Presale is Ownable(msg.sender) {
         uint256 presaleTokens;
         uint256 raised;
         address weth;
-        IERC20 token;
         IUniswapV2Factory UniswapV2Factory;
         IUniswapV2Router02 UniswapV2Router02;
-        uint8 status;
-        uint8 refundOptions;
+        uint8 state;
     }
 
     struct Pool {
+        IERC20 token;
         uint256 saleRate;
         uint256 listingRate;
         uint256 hardCap;
@@ -37,6 +36,7 @@ contract Presale is Ownable(msg.sender) {
         uint96 start;
         uint96 end;
         uint8 liquidity;
+        uint8 refundOptions;
     }
     
     error Validation(string reason);
@@ -106,7 +106,7 @@ contract Presale is Ownable(msg.sender) {
         data.UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
 
         // @dev would return the pair
-        // data.UniswapV2Factory.getPair(address(data.token), data.weth);
+        // data.UniswapV2Factory.getPair(address(pool.token), data.weth);
     }
 
     receive() external payable {
@@ -114,25 +114,20 @@ contract Presale is Ownable(msg.sender) {
     }
 
     function createPresale(
-        address _token,
-        uint8 _refundOptions,
         Pool memory _pool
     ) external onlyOwner returns (address) {
-        if(data.status != 0) revert Forbidden("");
-        if(_token == address(0)) revert Validation("");
+        if(data.state != 0) revert Forbidden("");
 
         _prevalidatePool(_pool);
 
-        data.status = 1;
-        data.token = IERC20(_token);
-        data.refundOptions = _refundOptions;
+        data.state = 1;
         pool = _pool;
 
         return address(this);
     }
 
     function deposit() external onlyOwner returns (uint256) {
-        if(data.status != 1) revert Forbidden("");
+        if(data.state != 1) revert Forbidden("");
 
         uint256 amount = PresaleMath.totalTokens(
             pool.hardCap,
@@ -140,9 +135,9 @@ contract Presale is Ownable(msg.sender) {
             pool.listingRate
         );
 
-        data.status = 2;
+        data.state = 2;
 
-        data.token.safeTransferFrom(msg.sender, address(this), amount);
+        pool.token.safeTransferFrom(msg.sender, address(this), amount);
 
         emit Deposit(
             msg.sender,
@@ -154,9 +149,9 @@ contract Presale is Ownable(msg.sender) {
     }
 
     function finalize() external onlyOwner finalizable returns(bool) {
-        if(data.status != 2) revert Forbidden("");
+        if(data.state != 2) revert Forbidden("");
 
-        data.status = 4;
+        data.state = 4;
 
         _liquify();
 
@@ -174,9 +169,9 @@ contract Presale is Ownable(msg.sender) {
                 pool.saleRate,
                 pool.listingRate
             );
-            address target = data.refundOptions != 0 ? msg.sender : DEAD;
+            address target = pool.refundOptions != 0 ? msg.sender : DEAD;
 
-            data.token.safeTransfer(target, remainder);
+            pool.token.safeTransfer(target, remainder);
         }
 
         emit Finalized(
@@ -189,14 +184,14 @@ contract Presale is Ownable(msg.sender) {
     }
 
     function cancel() external onlyOwner returns(bool){
-        if(data.status > 3) revert Forbidden("");
+        if(data.state > 3) revert Forbidden("");
 
-        data.status = 3;
+        data.state = 3;
 
-        if (data.token.balanceOf(address(this)) > 0) {
+        if (pool.token.balanceOf(address(this)) > 0) {
             uint256 amount = data.presaleTokens;
             data.presaleTokens = 0;
-            data.token.safeTransfer(msg.sender, amount);
+            pool.token.safeTransfer(msg.sender, amount);
         }
 
         emit Cancel(msg.sender, block.timestamp);
@@ -205,7 +200,7 @@ contract Presale is Ownable(msg.sender) {
     }
     
     function claim() external returns (uint256) {
-        if(data.status != 4) revert Forbidden("");
+        if(data.state != 4) revert Forbidden("");
 
         uint256 amount = PresaleMath.userTokens(
             weiContribution[msg.sender],
@@ -214,7 +209,7 @@ contract Presale is Ownable(msg.sender) {
 
         weiContribution[msg.sender] = 0;
 
-        data.token.safeTransfer(msg.sender, amount);
+        pool.token.safeTransfer(msg.sender, amount);
         
         emit TokenClaim(
             msg.sender, 
@@ -226,7 +221,7 @@ contract Presale is Ownable(msg.sender) {
     }
 
     function refund() external returns (uint256) {
-        if (data.status == 3) revert Forbidden("");
+        if (data.state == 3) revert Forbidden("");
 
         uint256 amount = weiContribution[msg.sender];
         if(amount == 0) revert Insufficient("");
@@ -262,7 +257,7 @@ contract Presale is Ownable(msg.sender) {
         uint256 _liquidityWei = PresaleMath.liquidityWei(data.raised, pool.liquidity);
 
         (uint amountToken, uint amountETH, ) = data.UniswapV2Router02.addLiquidityETH{value : _liquidityWei}(
-            address(data.token),
+            address(pool.token),
             _tokensForLiquidity, 
             _tokensForLiquidity, 
             _liquidityWei, 
@@ -293,6 +288,7 @@ contract Presale is Ownable(msg.sender) {
         if (_pool.liquidity < 50 || _pool.liquidity > 100) revert Validation("");
         if (_pool.start > block.timestamp) revert Validation("");
         if (_pool.start > _pool.end) revert Validation("");
+        if(address(_pool.token) == address(0)) revert Validation("");
         return true;
     }
 }
