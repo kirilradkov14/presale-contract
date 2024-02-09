@@ -49,6 +49,11 @@ contract Presale is Ownable(msg.sender) {
         _;
     }
 
+    event PoolCreation(
+        address indexed creator,
+        Pool pool
+    );
+    
     event Purchase(
         address indexed beneficiary, 
         uint256 contribution, 
@@ -123,6 +128,8 @@ contract Presale is Ownable(msg.sender) {
         data.state = 1;
         pool = _pool;
 
+        emit PoolCreation(msg.sender, _pool);
+        
         return address(this);
     }
 
@@ -132,7 +139,8 @@ contract Presale is Ownable(msg.sender) {
         uint256 amount = PresaleMath.totalTokens(
             pool.hardCap,
             pool.saleRate,
-            pool.listingRate
+            pool.listingRate,
+            pool.liquidity
         );
 
         data.state = 2;
@@ -167,7 +175,8 @@ contract Presale is Ownable(msg.sender) {
                 pool.hardCap,
                 data.raised,
                 pool.saleRate,
-                pool.listingRate
+                pool.listingRate,
+                pool.liquidity
             );
             address target = pool.refundOptions != 0 ? msg.sender : DEAD;
 

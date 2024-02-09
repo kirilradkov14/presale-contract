@@ -43,10 +43,17 @@ library PresaleMath {
      * @param amount The amount of Wei raised.
      * @param saleRate The rate at which tokens are sold per Wei.
      * @param listingRate The rate at which tokens are listed per Wei.
+     * @param liquidityPortion The percentage of the raised amount to be allocated for liquidity.
      * @return The total number of tokens required.
      */
-    function totalTokens(uint256 amount, uint256 saleRate, uint256 listingRate) internal pure returns (uint256) {
-        return (amount * saleRate) + (amount * listingRate);
+    function totalTokens(
+        uint256 amount, 
+        uint256 saleRate, 
+        uint256 listingRate, 
+        uint8 liquidityPortion
+    ) internal pure returns (uint256) {
+        uint256 forLiquidity = amount * listingRate * liquidityPortion / 100;
+        return amount * saleRate - forLiquidity;
     }
 
     /**
@@ -65,11 +72,29 @@ library PresaleMath {
      * @param raisedAmount The amount raised in the presale.
      * @param saleRate The rate at which tokens were sold per Wei.
      * @param listingRate The rate at which tokens were listed per Wei.
+     * @param liquidityPortion The percentage of the raised amount to be allocated for liquidity.
      * @return The number of unsold tokens.
      */
-    function remainder(uint256 totalAmount, uint256 raisedAmount, uint256 saleRate, uint256 listingRate) internal pure returns (uint256) {
-        uint256 _totalTokens = totalAmount * saleRate + totalAmount * listingRate;
-        uint256 _raisedTokens = raisedAmount * saleRate + raisedAmount * listingRate;
-        return _totalTokens - _raisedTokens;
+    function remainder(
+        uint256 totalAmount, 
+        uint256 raisedAmount, 
+        uint256 saleRate, 
+        uint256 listingRate, 
+        uint8 liquidityPortion
+    ) internal pure returns (uint256) {
+        uint256 _totalTokens = totalTokens(
+            totalAmount, 
+            saleRate, 
+            listingRate, 
+            liquidityPortion
+        );
+        uint256 _soldTokens = totalTokens(
+            raisedAmount, 
+            saleRate, 
+            listingRate, 
+            liquidityPortion
+        );
+
+        return _totalTokens - _soldTokens;
     }
 }
