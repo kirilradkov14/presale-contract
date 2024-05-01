@@ -9,7 +9,6 @@ async function main() {
   const weth:string = "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9"; //SEPOLIA
   const uniswapRouter:string = "0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008";
   const token:string = "0x76E53d4b44d749fD59449c32643DEF979A378a5f";
-  const timeNow:number = Math.floor(Date.now() / 1000);
   const pool = {
     tokenDeposit: ethers.parseUnits("10000000", 18), // 1B tokens
     hardCap: ethers.parseUnits("0.1", 18),
