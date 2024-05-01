@@ -1,81 +1,100 @@
 import { expect, assert } from "chai";
 import { ethers } from "hardhat";
-import { Address, Presale, Token, WETH, } from "../typechain-types";
+import { 
+    Presale, 
+    Token, 
+    WETH,
+} from "../typechain-types";
 
-describe("Expected presale behaviour", function(){
-    const DEAD:Address|string = "0x000000000000000000000000000000000000dEaD";
-    const TOTAL_SUPPLY:bigint = 69_696_969n * 10n ** 18n;
-    // let signers:HardhatEthersSigner[];
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-    let signers:any;
+describe("Presale test", function(){
     let weth:WETH;
     let token:Token;
     let presale:Presale;
-    let uniswapV2Factory:any;
-    let uniswapV2Router:any;
+    let contributions = [];
 
-    before("Set environment", async function(){
-        signers = await ethers.getSigners();
-        
-        // Deploy a mock WETH9
-        // const WETH = await ethers.getContractFactory("WETH");
-        // weth = await WETH.deploy();
-        // await weth.waitForDeployment();
-
-        // Deploy mock ERC20 token
-        // const Token = await ethers.getContractFactory("Token");
-        // token = await Token.deploy(TOTAL_SUPPLY);
-        // await token.waitForDeployment();
-        
-        // // Deploy mock uniswapV2Factory
-        // const UniswapV2Factory = await ethers.getContractFactory("UniswapV2Factory");
-        // uniswapV2Factory = await UniswapV2Factory.deploy(signers[0].address);
-        // await uniswapV2Factory.waitForDeployment();
-        
-        // // Deploy mock uniswapV2Router
-        // const UniswapV2Router = await ethers.getContractFactory("UniswapV2Router02");
-        // uniswapV2Router = await UniswapV2Router.deploy(uniswapV2Factory.target, weth.target);
-        // await uniswapV2Router.waitForDeployment();
-
-        // Deploy Presale      
-        const Presale = await ethers.getContractFactory("Presale");
-        presale = await Presale
-        .deploy("0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9", "0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008", "0x7E0987E5b3a30e3f2828572Bb659A548460a3003");
-        await presale.waitForDeployment();
-        console.log(presale.target);
+    before("Deploy contracts", async function() {
         
     });
 
-    it("Execution", async function(){
-        // signers = await ethers.getSigners();
+    it("Example test", async function() {
+        const TOTAL_SUPPLY:bigint = 1_000_000_000n * 10n ** 18n;
+        const name:string = "TestToken";
+        const symbol:string = "TEST";
+        const signers = await ethers.getSigners();
+        const uniswapV2Router02:string = "0x000000000000000000000000000000000000dEaD";
         const timeNow = Math.floor(Date.now() / 1000);
+        const pool = {
+            tokenDeposit: ethers.parseUnits("1000000000", 18), // 1B tokens
+            hardCap: ethers.parseUnits("700", 18),
+            softCap: ethers.parseUnits("350", 18),
+            max: ethers.parseUnits("3", 18),
+            min: ethers.parseUnits("0.1", 18),
+            start: timeNow + 25,
+            end: timeNow + 170,
+            liquidityBps: 5000
+        };
+        
+        const WETH = await ethers.getContractFactory("WETH");
+        weth = await WETH.deploy();
+        await weth.waitForDeployment();
 
-        const saleArgs:any = {
-            token: "0xE0d7C7C2940ddF078C09D5A5eF2b38e530E023Fa",
-            saleRate: ethers.parseEther("10"), //10 tokens per 1 wei
-            listingRate:ethers.parseEther("5"), // 5 tokens per 1 wei
-            hardCap: ethers.parseEther("0.01"),
-            softCap: ethers.parseEther("0.005"),
-            max: ethers.parseEther("0.005"),
-            min: ethers.parseEther("0.001"),
-            start: timeNow - 300,
-            end: timeNow + 650,
-            liquidity: 60,
-            refundOptions: 0
+        const Token = await ethers.getContractFactory("Token");
+        token = await Token.deploy(TOTAL_SUPPLY, name, symbol);
+        await token.waitForDeployment();
+        
+        const Presale = await ethers.getContractFactory("Presale");
+        presale = await Presale.deploy(weth.target, token.target, uniswapV2Router02, pool);
+        await presale.waitForDeployment();
+
+        const approveTokens = await token.approve(presale.target, TOTAL_SUPPLY);
+        await approveTokens.wait();
+
+        const tokenDeposit = await presale.deposit();
+        await tokenDeposit.wait();
+    
+        await sleep(5000);
+
+        console.log('Token balance before : ' + ethers.formatEther(await token.balanceOf(presale.target)));
+
+        // Random contributions
+        for (let i = 1; i < signers.length; i++) {
+            const randomEtherAmount = Math.random() * (3 - 0.1) + 0.1; // Value between 0.1 and 3 ethers
+            const purchaseValue = ethers.parseEther(randomEtherAmount.toString());
+            const purchase = await signers[i].sendTransaction({
+                to: presale.target,
+                value: purchaseValue,
+            });
+            await purchase.wait();
+            contributions.push({
+                address: signers[i].address,
+                ethContributed: randomEtherAmount.toFixed(2),
+                tokensClaimed: "0.00" // Initialize as a string to ensure type consistency
+            });
+            console.log(`${signers[i].address} Contributd ${randomEtherAmount.toFixed(2)} ETH.`);
+            
         }
-        // create presale 
-        const create = await presale.connect(signers[0]).createPresale(saleArgs);
-        await create.wait();
-        console.log();
-        
-        // console.log(presale.data.arguments[5]);
-        
-        // expect(presale.data.arguments[5]);
 
+        await sleep(80000);
+
+        // Finalizing the presale
+        const finalize = await presale.finalize();
+        await finalize.wait();
+
+        // Loop and claim tokens
+        for (let i = 1; i < signers.length; i++) {
+            const claim = await presale.connect(signers[i]).claim();
+            await claim.wait();
+            const tokensClaimed = await token.balanceOf(signers[i].address);
+            contributions[i - 1].tokensClaimed = ethers.formatEther(tokensClaimed);
+        }
+        console.table(contributions);
     });
 
-    after("Expected assertions after exectution", function(){
-
+    after("Expected assertions after execution", async function() {
+        console.log('Token balance  : ' + ethers.formatEther(await token.balanceOf(presale.target)));
     });
-
 });

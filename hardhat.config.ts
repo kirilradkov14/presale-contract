@@ -26,7 +26,7 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.8.23",
+        version: "0.8.24",
         settings: {
           optimizer: {
             enabled: true,
@@ -41,7 +41,10 @@ const config: HardhatUserConfig = {
     hardhat: {
       gas: "auto",       // Automatically estimate the gas
       blockGasLimit: 0x1fffffffffffff,
-      allowUnlimitedContractSize: true
+      allowUnlimitedContractSize: true,
+      accounts: {
+        count: 400
+    }
     },
     eth_mainnet:{
       url: process.env.ETH_MAINNET_HTTPS as string,
@@ -53,7 +56,8 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       url: process.env.ETH_SEPOLIA_HTTPS as string,
-      accounts: Accounts
+      accounts: Accounts,
+      timeout: 150_000
     },
     bnb_testnet: {
       url: process.env.BNB_TESTNET_HTTPS as string,
@@ -67,6 +71,9 @@ const config: HardhatUserConfig = {
       url: process.env.ARB_GOERLI_HTTPS as string,
       accounts: Accounts
     }
+  },
+  mocha: {
+    timeout: 1_000_000
   },
   gasReporter: {
     enabled: true,
