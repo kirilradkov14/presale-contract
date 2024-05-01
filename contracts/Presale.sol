@@ -1,428 +1,287 @@
-// solhint-disable not-rely-on-time
-// solhint-disable-next-line
-pragma solidity ^0.8.4;
-// SPDX-License-Identifier: Unlicensed
-// A+G = VNL
-// https://github.com/kirilradkov14
-import "./Ownable.sol";
-import "./Whitelist.sol";
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
 
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+import { IUniswapV2Router02 } from "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { IPresale } from "./interfaces/IPresale.sol";
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
+/**
+ * @title Presale contract
+ * @notice Create and manage a presales of an ERC20 token
+ */
+contract Presale is IPresale, Ownable {
+    using SafeERC20 for IERC20;
+    using Address for address payable;
 
-interface IUniswapV2Factory {
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
-}
+    /// Scaling factor to maintain precision.
+    uint256 constant SCALE = 10**18;
 
-interface IUniswapV2Router02 {
-    function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external payable returns (
-        uint amountToken,
-        uint amountETH,
-        uint liquidity
-    );
-}
-
-contract Presale is Ownable, Whitelist {
-
-    bool public isInit;
-    bool public isDeposit;
-    bool public isRefund;
-    bool public isFinish;
-    bool public burnTokens;
-    bool public isWhitelist;
-    address public creatorWallet;
-    address public teamWallet;
-    address public weth;
-    uint8 constant private FEE = 2;
-    uint8 public tokenDecimals;
-    uint256 public presaleTokens;
-    uint256 public ethRaised;
-
-    struct Pool {
-        uint64 startTime;
-        uint64 endTime;
-        uint8 liquidityPortion;
-        uint256 saleRate;
-        uint256 listingRate;
+    /** 
+     * @notice Presale options
+     * @param tokenDeposit Total tokens deposited for sale and liquidity.
+     * @param hardCap Maximum Wei to be raised.
+     * @param softCap Minimum Wei to be raised to consider the presale successful.
+     * @param max Maximum Wei contribution per address.
+     * @param min Minimum Wei contribution per address.
+     * @param start Start timestamp of the presale.
+     * @param end End timestamp of the presale.
+     * @param liquidityBps Basis points of funds raised to be allocated to liquidity.
+    */ 
+    struct PresaleOptions{
+        uint256 tokenDeposit;
         uint256 hardCap;
         uint256 softCap;
-        uint256 maxBuy;
-        uint256 minBuy;
+        uint256 max;
+        uint256 min;
+        uint112 start;
+        uint112 end;
+        uint32 liquidityBps;
     }
 
-    IERC20 public tokenInstance;
-    IUniswapV2Factory public UniswapV2Factory;
-    IUniswapV2Router02 public UniswapV2Router02;
+    /** 
+     * @notice Presale pool
+     * @param token Address of the token.
+     * @param uniswapV2Router02
+     * @param tokenBalance Token balance in this contract
+     * @param tokensClaimable
+     * @param tokensLiquidity
+     * @param weiRaised
+     * @param weth
+     * @param state Current state of the presale {1: Initialized, 2: Active, 3: Canceled, 4: Finalized}.
+     * @param options PresaleOptions struct containing configuration for the presale.
+    */
+    struct Pool {
+        IERC20 token;
+        IUniswapV2Router02 uniswapV2Router02;
+        uint256 tokenBalance;
+        uint256 tokensClaimable;
+        uint256 tokensLiquidity;
+        uint256 weiRaised;
+        address weth;
+        uint8 state;
+        PresaleOptions options;
+    }
+
+    mapping(address => uint256) public contributions;
+
     Pool public pool;
 
-    mapping(address => uint256) public ethContribution;
-
-    modifier onlyActive {
-        require(block.timestamp >= pool.startTime, "Sale must be active.");
-        require(block.timestamp <= pool.endTime, "Sale must be active.");
+    /// @notice Canceled or NOT softcapped and expired
+    modifier onlyRefundable() {
+        if(pool.state != 3 || (block.timestamp > pool.options.end && pool.weiRaised < pool.options.softCap)) revert NotRefundable(); 
         _;
     }
-
-    modifier onlyInactive {
-        require(
-            block.timestamp < pool.startTime || 
-            block.timestamp > pool.endTime || 
-            ethRaised >= pool.hardCap, "Sale must be inactive."
-            );
-        _;
-    }
-
-    modifier onlyRefund {
-        require(
-            isRefund == true || 
-            (block.timestamp > pool.endTime && ethRaised <= pool.hardCap), "Refund unavailable."
-            );
-        _;
-    }
-
-    constructor(
-        IERC20 _tokenInstance, 
-        uint8 _tokenDecimals, 
-        address _uniswapv2Router, 
-        address _uniswapv2Factory,
-        address _teamWallet,
-        address _weth,
-        bool _burnTokens,
-        bool _isWhitelist
-        ) {
-
-        require(_uniswapv2Router != address(0), "Invalid router address");
-        require(_uniswapv2Factory != address(0), "Invalid factory address");
-        require(_tokenDecimals >= 0, "Decimals not supported.");
-        require(_tokenDecimals <= 18, "Decimals not supported.");
-
-        isInit = false;
-        isDeposit = false;
-        isFinish = false;
-        isRefund = false;
-        ethRaised = 0;
-
-        teamWallet = _teamWallet;
-        weth = _weth;
-        burnTokens = _burnTokens;
-        isWhitelist = _isWhitelist;
-        tokenInstance = _tokenInstance;
-        creatorWallet = address(payable(msg.sender));
-        tokenDecimals =  _tokenDecimals;
-        UniswapV2Router02 = IUniswapV2Router02(_uniswapv2Router);
-        UniswapV2Factory = IUniswapV2Factory(_uniswapv2Factory);
-
-        require(UniswapV2Factory.getPair(address(tokenInstance), weth) == address(0), "IUniswap: Pool exists.");
-
-        tokenInstance.approve(_uniswapv2Router, tokenInstance.totalSupply());
-    }
-
-    event Liquified(
-        address indexed _token, 
-        address indexed _router, 
-        address indexed _pair
-        );
-
-    event Canceled(
-        address indexed _inititator, 
-        address indexed _token, 
-        address indexed _presale
-        );
-
-    event Bought(address indexed _buyer, uint256 _tokenAmount);
-
-    event Refunded(address indexed _refunder, uint256 _tokenAmount);
-
-    event Deposited(address indexed _initiator, uint256 _totalDeposit);
-
-    event Claimed(address indexed _participent, uint256 _tokenAmount);
-
-    event RefundedRemainder(address indexed _initiator, uint256 _amount);
-
-    event BurntRemainder(address indexed _initiator, uint256 _amount);
-
-    event Withdraw(address indexed _creator, uint256 _amount);
-
-    /*
-    * Reverts ethers sent to this address whenever requirements are not met
+    
+    /** 
+     * @param _weth Address of WETH.
+     * @param _token Address of the presale token.
+     * @param _uniswapV2Router02 Address of the Uniswap V2 router.
+     * @param _options Configuration options for the presale.
     */
+    constructor (address _weth, address _token, address _uniswapV2Router02, PresaleOptions memory _options) Ownable(msg.sender) {
+        _prevalidatePool(_options);
+
+        pool.uniswapV2Router02 = IUniswapV2Router02(_uniswapV2Router02);
+        pool.token = IERC20(_token);
+        pool.state = 1;
+        pool.weth = _weth;
+        pool.options = _options;
+    }
+
     receive() external payable {
-        if(block.timestamp >= pool.startTime && block.timestamp <= pool.endTime){
-            buyTokens(_msgSender());
-        } else {
-            revert("Presale is closed");
+        _purchase(msg.sender, msg.value);
+    }
+
+    /** 
+     * @notice Calling this function deposits tokens into the contract. Contributions are unavailable until this 
+     * function is called by the owner of the presale.
+     * NOTE This function uses { transferFrom } method from { IERC20 } to handle token deposits into the contract, make sure to approve this contract to spend the required tokens for deposit.
+     * @return The amount of tokens deposited.
+    */
+    function deposit() external onlyOwner returns (uint256) {
+        if(pool.state != 1) revert InvalidState(pool.state);
+        pool.state = 2;
+        
+        pool.tokenBalance += pool.options.tokenDeposit;
+        pool.tokensLiquidity = _tokensForLiquidity();
+        pool.tokensClaimable = _tokensForPresale();
+
+        IERC20(pool.token).safeTransferFrom(msg.sender, address(this), pool.options.tokenDeposit);
+
+        emit Deposit(msg.sender, pool.options.tokenDeposit, block.timestamp);
+        return pool.options.tokenDeposit;
+    }
+
+    /** 
+     * @notice Call this function to finalize a succesfull presale. Calling this function will provide liquidity
+     * to Uniswap, withdraw the raised funds and enable token claiming. Tokens can NOT be claimed prior calling this function.
+     * @return True if the finalization was successful.
+    */
+    function finalize() external onlyOwner returns(bool) {
+        if(pool.state != 2) revert InvalidState(pool.state);
+        if(pool.weiRaised < pool.options.softCap && block.timestamp < pool.options.end) revert SoftCapNotReached();
+
+        pool.state = 4;
+
+        uint256 liquidityWei = _weiForLiquidity();
+        _liquify(liquidityWei, pool.tokensLiquidity);
+        pool.tokenBalance -= pool.tokensLiquidity;
+
+        uint256 withdrawable = pool.weiRaised - liquidityWei;
+        if (withdrawable > 0) payable(msg.sender).sendValue(withdrawable);
+
+        emit Finalized(msg.sender, pool.weiRaised, block.timestamp);
+        
+        return true;
+    }
+
+    /** 
+     * @notice Call this function to cancel a presale. Calling this function withdraws deposited tokens and allows contributors 
+     * to refund their contributions. Can only cancel NOT finalized presale. 
+     * @return True if the cancellation was successful.
+    */
+    function cancel() external onlyOwner returns(bool){
+        if(pool.state > 3) revert InvalidState(pool.state);
+
+        pool.state = 3;
+
+        if (pool.tokenBalance > 0) {
+            uint256 amount = pool.tokenBalance;
+            pool.tokenBalance = 0;
+            IERC20(pool.token).safeTransfer(msg.sender, amount);
         }
+
+        emit Cancel(msg.sender, block.timestamp);
+
+        return true;
     }
-
-    /*
-    * Initiates the arguments of the sale
-    @dev arguments must be pa   ssed in wei (amount*10**18)
+    /** 
+     * @notice Allows contributors to claim their tokens after the presale is finalized.
+     * @return The amount of tokens claimed.
     */
-    function initSale(
-        uint64 _startTime,
-        uint64 _endTime,
-        uint8 _liquidityPortion,
-        uint256 _saleRate, 
-        uint256 _listingRate,
-        uint256 _hardCap,
-        uint256 _softCap,
-        uint256 _maxBuy,
-        uint256 _minBuy
-        ) external onlyOwner onlyInactive {        
+    function claim() external returns (uint256) {
+        if(pool.state != 4) revert InvalidState(pool.state);
+        if (contributions[msg.sender] == 0) revert NotClaimable();
 
-        require(isInit == false, "Sale no initialized");
-        require(_startTime >= block.timestamp, "Invalid start time.");
-        require(_endTime > block.timestamp, "Invalid end time.");
-        require(_softCap >= _hardCap / 2, "SC must be >= HC/2.");
-        require(_liquidityPortion >= 30, "Liquidity must be >=30.");
-        require(_liquidityPortion <= 100, "Invalid liquidity.");
-        require(_minBuy < _maxBuy, "Min buy must greater than max.");
-        require(_minBuy > 0, "Min buy must exceed 0.");
-        require(_saleRate > 0, "Invalid sale rate.");
-        require(_listingRate > 0, "Invalid listing rate.");
-
-        Pool memory newPool = Pool(
-            _startTime,
-            _endTime, 
-            _liquidityPortion,
-            _saleRate, 
-            _listingRate, 
-            _hardCap,
-            _softCap, 
-            _maxBuy, 
-            _minBuy
-            );
-
-        pool = newPool;
+        uint256 amount = userTokens(msg.sender);
+        pool.tokenBalance -= amount;
+        contributions[msg.sender] = 0;
         
-        isInit = true;
+        IERC20(pool.token).safeTransfer(msg.sender, amount);
+        emit TokenClaim(msg.sender, amount, block.timestamp);
+        return amount;
     }
 
-    /*
-    * Once called the owner deposits tokens into pool
+    /** 
+     * @notice Allows contributors to get a refund when the presale fails or is canceled.
+     * @return The amount of Wei refunded.
     */
-    function deposit() external onlyOwner {
-        require(!isDeposit, "Tokens already deposited.");
-        require(isInit, "Not initialized yet.");
+    function refund() external onlyRefundable returns (uint256) {
+        if(contributions[msg.sender] == 0) revert NotRefundable();
 
-        uint256 tokensForSale = pool.hardCap * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
-        presaleTokens = tokensForSale;
-        uint256 totalDeposit = _getTokenDeposit();
+        uint256 amount = contributions[msg.sender];
 
-        isDeposit = true;
-        require(tokenInstance.transferFrom(msg.sender, address(this), totalDeposit), "Deposit failed.");
-        emit Deposited(msg.sender, totalDeposit);
+        if(address(this).balance >= amount) {   
+            contributions[msg.sender] = 0;
+            payable(msg.sender).sendValue(amount);
+            emit Refund(msg.sender, amount, block.timestamp);
+        }
+
+        return amount;
     }
 
-    /*
-    * Finish the sale - Create Uniswap v2 pair, add liquidity, take fees, withrdawal funds, burn/refund unused tokens
+    /** 
+     * @notice Handles token purchase.
+     * @param beneficiary The address making the purchase.
+     * @param amount The amount of Wei contributed.
     */
-    function finishSale() external onlyOwner onlyInactive{
-        require(ethRaised >= pool.softCap, "Soft Cap is not met.");
-        require(block.timestamp > pool.startTime, "Can not finish before start");
-        require(!isFinish, "Sale already launched.");
-        require(!isRefund, "Refund process.");
+    function _purchase(address beneficiary, uint256 amount) private {
+        _prevalidatePurchase(beneficiary, amount);
 
-        //get the used amount of tokens
-        uint256 tokensForSale = ethRaised * (pool.saleRate) / (10**18) / (10**(18-tokenDecimals));
-        uint256 tokensForLiquidity = ethRaised * pool.listingRate * pool.liquidityPortion / 100;
-        tokensForLiquidity = tokensForLiquidity / (10**18) / (10**(18-tokenDecimals));
-        tokensForLiquidity = tokensForLiquidity - (tokensForLiquidity * FEE / 100);
-        uint256 tokensForFee = FEE * (tokensForSale + tokensForLiquidity) / 100;
-        isFinish = true;
+        pool.weiRaised += amount;
+        contributions[beneficiary] += amount;
         
-        //add liquidity
-        (uint amountToken, uint amountETH, ) = UniswapV2Router02.addLiquidityETH{value : _getLiquidityEth()}(
-            address(tokenInstance),
-            tokensForLiquidity, 
-            tokensForLiquidity, 
-            _getLiquidityEth(), 
-            owner(), 
+        emit Purchase(beneficiary, amount);
+    }
+
+    /**
+     * @notice Handles liquidity provisioning.
+     * @param _weiAmount The amount of Wei to be added to liquidity.
+     * @param _tokenAmount The amount of tokens to be added to liquidity.
+    */
+    function _liquify(uint256 _weiAmount, uint256 _tokenAmount) private {
+        (uint amountToken, uint amountETH,) = pool.uniswapV2Router02.addLiquidityETH{value : _weiAmount}(
+            address(pool.token),
+            _tokenAmount,
+            _tokenAmount,
+            _weiAmount,
+            owner(),
             block.timestamp + 600
-            );
-
-        require(amountToken == tokensForLiquidity && amountETH == _getLiquidityEth(), "Providing liquidity failed.");
-        emit Liquified(
-            address(tokenInstance), 
-            address(UniswapV2Router02), 
-            UniswapV2Factory.getPair(address(tokenInstance), 
-            weth)
-            );
-
-        //take the Fees
-        uint256 teamShareEth = _getFeeEth();
-        payable(teamWallet).transfer(teamShareEth);
-
-        require(tokenInstance.transfer(teamWallet, tokensForFee), "Fee taking failed.");
-
-        //withrawal eth
-        uint256 ownerShareEth = _getOwnerEth();
-        if (ownerShareEth > 0) {
-            payable(creatorWallet).transfer(ownerShareEth);
-        }
-
-        //If HC is not reached, burn or refund the remainder
-        if (ethRaised < pool.hardCap) {
-            uint256 remainder = _getTokenDeposit() - (tokensForSale + tokensForLiquidity + tokensForFee);
-            if(burnTokens == true){
-                require(tokenInstance.transfer(
-                    0x000000000000000000000000000000000000dEaD, 
-                    remainder), "Unable to burn."
-                    );
-                emit BurntRemainder(msg.sender, remainder);
-            } else {
-                require(tokenInstance.transfer(creatorWallet, remainder), "Refund failed.");
-                emit RefundedRemainder(msg.sender, remainder);
-            }
-        }
+        );
+        
+        if(amountToken != _tokenAmount && amountETH != _weiAmount) revert LiquificationFailed();
     }
 
-    /*
-    * The owner can decide to close the sale if it is still active
-    NOTE: Creator may call this function even if the Hard Cap is reached, to prevent it use:
-     require(ethRaised < pool.hardCap)
+    /**
+     * @notice Validates the purchase conditions before accepting funds.
+     * @param _beneficiary The address attempting to make a purchase.
+     * @param _amount The amount of Wei being contributed.
+     * @return True if the purchase is valid.
     */
-    function cancelSale() external onlyOwner onlyActive {
-        require(!isFinish, "Sale finished.");
-        pool.endTime = 0;
-        isRefund = true;
-
-        if (tokenInstance.balanceOf(address(this)) > 0) {
-            uint256 tokenDeposit = _getTokenDeposit();
-            tokenInstance.transfer(msg.sender, tokenDeposit);
-            emit Withdraw(msg.sender, tokenDeposit);
-        }
-        emit Canceled(msg.sender, address(tokenInstance), address(this));
+    function _prevalidatePurchase(address _beneficiary, uint256 _amount) internal view returns(bool) {
+        if(pool.state != 2) revert InvalidState(pool.state);
+        if(block.timestamp < pool.options.start || block.timestamp > pool.options.end) revert NotInPurchasePeriod();
+        if(pool.weiRaised + _amount > pool.options.hardCap) revert HardCapExceed();
+        if(_amount < pool.options.min) revert PurchaseBelowMinimum();
+        if(_amount + contributions[_beneficiary] > pool.options.max) revert PurchaseLimitExceed();
+        return true;
     }
 
-    /*
-    * Allows participents to claim the tokens they purchased 
+    /**
+     * @param _options The presale options.
+     * @return True if the pool configuration is valid.
     */
-    function claimTokens() external onlyInactive {
-        require(isFinish, "Sale is still active.");
-        require(!isRefund, "Refund process.");
-
-        uint256 tokensAmount = _getUserTokens(ethContribution[msg.sender]);
-        ethContribution[msg.sender] = 0;
-        require(tokenInstance.transfer(msg.sender, tokensAmount), "Claim failed.");
-        emit Claimed(msg.sender, tokensAmount);
+    function _prevalidatePool(PresaleOptions memory _options) internal view returns(bool) {
+        if (_options.softCap == 0 || _options.softCap < _options.hardCap / 2) revert InvalidCapValue();
+        if (_options.min == 0 || _options.min > _options.max) revert InvalidLimitValue();
+        if (_options.liquidityBps < 5000 || _options.liquidityBps > 10000) revert InvalidLiquidityValue();
+        if (_options.start > block.timestamp || _options.end < _options.start) revert InvalidTimestampValue();
+        return true;
     }
 
-    /*
-    * Refunds the Eth to participents
+    /**
+     * @notice Tokens per user rate is dynamically calculated using the proportional allocation of current raise amount in Wei.
+     * @param contributor The address of the contributor.
+     * @return The amount of tokens claimable by the contributor.
     */
-    function refund() external onlyInactive onlyRefund{
-        uint256 refundAmount = ethContribution[msg.sender];
-
-        if (address(this).balance >= refundAmount) {
-            if (refundAmount > 0) {
-                ethContribution[msg.sender] = 0;
-                address payable refunder = payable(msg.sender);
-                refunder.transfer(refundAmount);
-                emit Refunded(refunder, refundAmount);
-            }
-        }
+    function userTokens(address contributor) public view returns(uint256){
+        return ((contributions[contributor] * SCALE) / pool.weiRaised * pool.tokensClaimable) / SCALE;
     }
 
-    /*
-    * Withdrawal tokens on refund
+    /**
+     * @notice Calculates the amount of tokens allocated for liquidity.
+     * @return The amount of tokens for liquidity.
     */
-    function withrawTokens() external onlyOwner onlyInactive onlyRefund {
-        if (tokenInstance.balanceOf(address(this)) > 0) {
-            uint256 tokenDeposit = _getTokenDeposit();
-            require(tokenInstance.transfer(msg.sender, tokenDeposit), "Withdraw failed.");
-            emit Withdraw(msg.sender, tokenDeposit);
-        }
+    function _tokensForLiquidity() internal view returns (uint256){
+        return pool.options.tokenDeposit * pool.options.liquidityBps / 10_000;
     }
 
-    /*
-    * Disables WL
+    /**
+     * @notice Calculates the amount of tokens allocated for the presale.
+     * @return The amount of tokens available for the presale.
     */
-    function disableWhitelist() external onlyOwner{
-        require(isWhitelist, "WL already disabled.");
-
-        isWhitelist = false;
+    function _tokensForPresale() internal view returns (uint256){
+        return pool.options.tokenDeposit - (pool.options.tokenDeposit * pool.options.liquidityBps / 10_000);
     }
 
-    /*
-    * If requirements are passed, updates user"s token balance based on their eth contribution
+    /**
+     * @notice Calculates the amount of W   ei allocated for liquidity provisioning.
+     * @return The amount of Wei for liquidity provisioning.
     */
-    function buyTokens(address _contributor) public payable onlyActive {
-        require(isDeposit, "Tokens not deposited.");
-
-        uint256 weiAmount = msg.value;
-        _checkSaleRequirements(_contributor, weiAmount);
-        uint256 tokensAmount = _getUserTokens(ethContribution[msg.sender]);
-        ethRaised += weiAmount;
-        presaleTokens -= tokensAmount;
-        ethContribution[msg.sender] += weiAmount;
-        emit Bought(_msgSender(), tokensAmount);
+    function _weiForLiquidity() internal view returns (uint256){
+        return pool.weiRaised * pool.options.liquidityBps / 10_000;
     }
-
-    /*
-    * Checks whether a user passes token purchase requirements, called internally on buyTokens function
-    */
-    function _checkSaleRequirements(address _beneficiary, uint256 _amount) internal view { 
-        if(isWhitelist){
-            require(whitelists[_msgSender()], "User not Whitelisted.");
-        }
-
-        require(_beneficiary != address(0), "Transfer to 0 address.");
-        require(_amount != 0, "Wei Amount is 0");
-        require(_amount >= pool.minBuy, "Min buy is not met.");
-        require(_amount + ethContribution[_beneficiary] <= pool.maxBuy, "Max buy limit exceeded.");
-        require(ethRaised + _amount <= pool.hardCap, "HC Reached.");
-        this;
-    }
-
-    /*
-    * Internal functions, called when calculating balances
-    */
-    function _getUserTokens(uint256 _amount) internal view returns (uint256){
-        return _amount * (pool.saleRate) / (10 ** 18) / (10**(18-tokenDecimals));
-    }
-
-    function _getLiquidityTokensDeposit() internal view returns (uint256) {
-        uint256 value = pool.hardCap * pool.listingRate * pool.liquidityPortion / 100;
-        value = value - (value * FEE / 100);
-        return value / (10**18) / (10**(18-tokenDecimals));
-    }
-    
-    function _getFeeEth() internal view returns (uint256) {
-        return (ethRaised * FEE / 100);
-    }
-
-    function _getLiquidityEth() internal view returns (uint256) {
-        uint256 etherFee = _getFeeEth();
-        return((ethRaised - etherFee) * pool.liquidityPortion / 100);
-    }
-
-    function _getOwnerEth() internal view returns (uint256) { 
-        uint256 etherFee = _getFeeEth();
-        uint256 liquidityEthFee = _getLiquidityEth();
-        return(ethRaised - (etherFee + liquidityEthFee));
-    }
-    
-    function _getTokenDeposit() internal view returns (uint256){
-        uint256 tokensForSale = pool.hardCap * pool.saleRate / (10**18) / (10**(18-tokenDecimals));
-        uint256 tokensForLiquidity = _getLiquidityTokensDeposit();
-        uint256 tokensForFee = FEE * (tokensForSale + tokensForLiquidity) / 100;
-        return(tokensForSale + tokensForLiquidity + tokensForFee);
-    }
-}   
+}
